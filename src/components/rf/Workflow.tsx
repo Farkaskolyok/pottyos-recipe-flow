@@ -26,15 +26,24 @@ export function StepCounter({
   let tone = "text-muted-foreground";
   const n = c.errors + c.warns;
   if (s === "Jóváhagyás") {
-    if (p.status === "approved") ((txt = "✓"), (tone = "text-success"));
+    if (p.status === "approved") {
+      txt = "✓";
+      tone = "text-success";
+    }
   } else if (s === "Dokumentumok") {
-    if (diffs) ((txt = String(diffs)), (tone = "text-warning"));
+    if (diffs) {
+      txt = String(diffs);
+      tone = "text-warning";
+    }
   } else if (s === "Források" && !p.files?.length) {
     txt = "—";
   } else if (n) {
     txt = s === "Források" ? "!" : String(n);
     tone = c.errors ? "text-destructive" : "text-warning";
-  } else if (done) ((txt = "✓"), (tone = "text-success"));
+  } else if (done) {
+    txt = "✓";
+    tone = "text-success";
+  }
   return (
     <span
       aria-label={`${s}: ${txt}`}
