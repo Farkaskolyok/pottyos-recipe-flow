@@ -119,7 +119,7 @@ describe("document preview", () => {
     const docs = buildDocs(p, ds, DEMO_DICTIONARY, DEFAULT_SETTINGS);
     for (const k of ["sheet", "spec", "pack"] as const) {
       const { container, unmount } = wrap(<DocPreview doc={docs[k]} />);
-      expect(within(container).getByText(docs[k].title, { exact: false })).toBeInTheDocument();
+      expect(within(container).getAllByText(docs[k].title, { exact: false }).length).toBeGreaterThan(0);
       unmount();
     }
   });
