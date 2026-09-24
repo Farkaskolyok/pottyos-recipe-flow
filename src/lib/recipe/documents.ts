@@ -1,6 +1,7 @@
 import type { Product, DictionaryEntry } from "./types";
 import type { Dataset, Segment, Settings, Destination } from "./engine";
 import { huDate, huNumber } from "./format";
+import { regVerified } from "./sources";
 
 /*
  * Three separate MASTER TEMPLATES. Their structure (section order, numbering, tables,
@@ -175,7 +176,7 @@ export function buildDocs(
   const regs = [
     b.legalRef.display,
     ...(p.files ?? []).flatMap((f) =>
-      f.regulatory.filter((r) => r.status === "ok").map((r) => r.identifier),
+      f.regulatory.filter(regVerified).map((r) => r.identifier),
     ),
   ].filter((x, i, a) => x && a.indexOf(x) === i);
   const byId = new Map(dict.map((d) => [d.id, d]));

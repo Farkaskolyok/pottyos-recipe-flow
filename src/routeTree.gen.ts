@@ -18,6 +18,7 @@ import { Route as SzotarRouteImport } from './routes/szotar'
 import { Route as UjRouteImport } from './routes/uj'
 import { Route as TermekekIndexRouteImport } from './routes/termekek.index'
 import { Route as TermekekIdRouteImport } from './routes/termekek.$id'
+import { Route as ApiPublicRegulationRouteImport } from './routes/api/public/regulation'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,11 @@ const TermekekIdRoute = TermekekIdRouteImport.update({
   path: '/termekek/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRegulationRoute = ApiPublicRegulationRouteImport.update({
+  id: '/api/public/regulation',
+  path: '/api/public/regulation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/uj': typeof UjRoute
   '/termekek/$id': typeof TermekekIdRoute
   '/termekek/': typeof TermekekIndexRoute
+  '/api/public/regulation': typeof ApiPublicRegulationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/uj': typeof UjRoute
   '/termekek/$id': typeof TermekekIdRoute
   '/termekek': typeof TermekekIndexRoute
+  '/api/public/regulation': typeof ApiPublicRegulationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/uj': typeof UjRoute
   '/termekek/$id': typeof TermekekIdRoute
   '/termekek/': typeof TermekekIndexRoute
+  '/api/public/regulation': typeof ApiPublicRegulationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/uj'
     | '/termekek/$id'
     | '/termekek/'
+    | '/api/public/regulation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/uj'
     | '/termekek/$id'
     | '/termekek'
+    | '/api/public/regulation'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/uj'
     | '/termekek/$id'
     | '/termekek/'
+    | '/api/public/regulation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   UjRoute: typeof UjRoute
   TermekekIdRoute: typeof TermekekIdRoute
   TermekekIndexRoute: typeof TermekekIndexRoute
+  ApiPublicRegulationRoute: typeof ApiPublicRegulationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermekekIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/regulation': {
+      id: '/api/public/regulation'
+      path: '/api/public/regulation'
+      fullPath: '/api/public/regulation'
+      preLoaderRoute: typeof ApiPublicRegulationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   UjRoute: UjRoute,
   TermekekIdRoute: TermekekIdRoute,
   TermekekIndexRoute: TermekekIndexRoute,
+  ApiPublicRegulationRoute: ApiPublicRegulationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1114,7 +1114,13 @@ function ApproveStep({
       </ul>
       <p className="mb-6 text-sm">
         <b className={ds.counts.error ? "text-destructive" : ""}>{ds.counts.error} hiba</b> ·{" "}
-        <b>{ds.counts.warn} ellenőrizendő adat</b>
+        <b>
+          {ds.counts.warn - (ds.checks.some((c) => c.id === "src-reg") ? 1 : 0)} ellenőrizendő adat
+        </b>
+        {(() => {
+          const t = ds.checks.find((c) => c.id === "src-reg")?.text;
+          return t ? <span className="text-muted-foreground"> · {t}</span> : null;
+        })()}
       </p>
       {blocked && (
         <div className="mb-4">

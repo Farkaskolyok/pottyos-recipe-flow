@@ -93,17 +93,23 @@ describe("product package", () => {
     p.conflictDecisions = { [c.id]: { choice: "spec", value: c.spec, by: "T", at: "" } };
     expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-conf")).toBeUndefined();
   });
-  it("regulatory review status blocks approval until checked", () => {
+  it("unverified regulatory reference is a warning, not blocking", () => {
     const p = pkg();
     const ds = buildDataset(p, dict, S);
     const reg = ds.checks.find((c) => c.id === "src-reg")!;
-    expect(reg.level).toBe("error");
+    expect(reg.level).toBe("warn");
+    expect(reg.text).toMatch(/^Ellenőrizendő jogszabályok: \d+$/);
     expect(fixTarget(reg)).toMatchObject({ step: "Források", label: "ELLENŐRZÉS" });
     p.files = p.files!.map((f) => ({
       ...f,
-      regulatory: f.regulatory.map((r) => ({ ...r, status: "ok" as const })),
+      regulatory: f.regulatory.map((r) => ({ ...r, status: "verified_local" as const })),
     }));
     expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-reg")).toBeUndefined();
+    p.files = p.files!.map((f) => ({
+      ...f,
+      regulatory: f.regulatory.map((r) => ({ ...r, status: "not_found" as const })),
+    }));
+    expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-reg-bad")?.level).toBe("error");
   });
 });
 
