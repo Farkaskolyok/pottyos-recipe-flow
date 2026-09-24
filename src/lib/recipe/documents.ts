@@ -480,7 +480,7 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
     mayContain: mayC,
     claims: val("pack", "claims"),
     servingsPerPack: or(val("pack", "servingsPerPack")),
-    storageText: `${b.bestBeforeWording.display} (nap, hónap) a csomagoláson jelölt időpontig${val("pack", "storage") ? ", " + val("pack", "storage") : ""}.`,
+    storageText: `${b.bestBeforeWording.display} (nap, hónap) a csomagoláson jelölt időpontig${val("pack", "storage") ? ", " + val("pack", "storage") : ""}`.replace(/\.*$/, ".") ,
     manufacturer: or(val("pack", "manufacturer")),
     healthMarkNo: (val("pack", "healthMark").match(/\d+/)?.[0]) ?? DASH,
     plantAddress: or(val("pack", "plantAddress")),
