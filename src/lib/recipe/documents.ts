@@ -4,16 +4,19 @@ import { huDate, huNumber } from "./format";
 
 export type Block =
   | { type: "heading"; text: string }
-  | { type: "kv"; rows: [string, string][] }
+  | { type: "kv"; rows: KVRow[] }
   | { type: "table"; head: string[]; rows: string[][] }
-  | { type: "rich"; segments: Segment[] }
-  | { type: "para"; text: string };
+  | { type: "rich"; segments: Segment[]; field?: string; prefix?: Segment[]; suffix?: Segment[] }
+  | { type: "para"; text: string; field?: string; prefix?: string };
+
+/** [label, value, fieldKey?] — fieldKey enables inline editing in the preview */
+export type KVRow = [string, string] | [string, string, string];
 
 export interface DocModel {
   kind: Destination;
   title: string;
   fileName: string;
-  meta: [string, string][];
+  meta: KVRow[];
   blocks: Block[];
 }
 
@@ -42,18 +45,22 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
       ],
     };
   };
-  const basicRows = (d: Destination): [string, string][] => {
-    const r: [string, string][] = [];
-    if (vis("productName", d)) r.push(["Terméknév", name]);
-    if (vis("marketingName", d) && b.marketingName.display) r.push(["Marketing megnevezés", b.marketingName.display]);
-    if (vis("productWeight", d)) r.push(["Nettó tömeg", b.productWeight.display || "—"]);
-    if (vis("servingSize", d) && b.servingSize.display) r.push(["Adagméret", b.servingSize.display]);
-    if (vis("packaging", d) && b.packaging.display) r.push(["Csomagolás", b.packaging.display]);
-    if (vis("losses", d) && b.losses.display) r.push(["Gyártási veszteség", b.losses.display]);
+  const basicRows = (d: Destination): KVRow[] => {
+    const r: KVRow[] = [];
+    if (vis("productName", d)) r.push(["Terméknév", name, "productName"]);
+    if (vis("marketingName", d) && b.marketingName.display) r.push(["Marketing megnevezés", b.marketingName.display, "marketingName"]);
+    if (vis("productWeight", d)) r.push(["Nettó tömeg", b.productWeight.display || "—", "productWeight"]);
+    if (vis("servingSize", d) && b.servingSize.display) r.push(["Adagméret", b.servingSize.display, "servingSize"]);
+    if (vis("packaging", d) && b.packaging.display) r.push(["Csomagolás", b.packaging.display, "packaging"]);
+    if (vis("losses", d) && b.losses.display) r.push(["Gyártási veszteség", b.losses.display, "losses"]);
     if (vis("totalSolids", d) && b.totalSolids.display) r.push(["Szárazanyag", b.totalSolids.display]);
+    if (d !== "pack") {
+      r.push(["Állag", b.texture.display, "texture"]);
+      r.push(["Elfogadhatósági tartomány", b.acceptanceRange.display, "acceptanceRange"]);
+    }
     return r;
   };
-  const meta: [string, string][] = [
+  const meta: KVRow[] = [
     ["Termékazonosító", p.internalId],
     ["Receptverzió", p.recipeVersion],
     ["Dokumentumverzió", p.docVersion],
@@ -100,27 +107,32 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
     meta,
     blocks: [
       { type: "heading", text: "Termékadatok" },
-      { type: "kv", rows: [...basicRows("spec"), ...(b.description.display ? [["Termékleírás", b.description.display] as [string, string]] : [])] },
+      { type: "kv", rows: [...basicRows("spec"), ["Termékleírás", b.description.display, "description"]] },
       { type: "heading", text: "Összetevők" },
-      { type: "rich", segments: ds.ingredientSegments },
+      { type: "rich", segments: ds.ingredientSegments, field: "ingredientText" },
       { type: "heading", text: "Allergének" },
-      { type: "para", text: ds.allergens.length ? `Tartalmaz: ${ds.allergens.join(", ")}.` : "Nem tartalmaz jelölésköteles allergént." },
+      { type: "para", text: ds.allergens.length ? ds.allergens.join(", ") : "Nem tartalmaz jelölésköteles allergént.", field: "allergenList", prefix: "Tartalmaz: " },
       { type: "heading", text: "Tápérték" },
       nutritionTable("spec"),
       { type: "heading", text: "Tárolás és gyártó" },
-      { type: "kv", rows: [["Tárolás", b.storage.display], ["Gyártó", b.manufacturer.display], ...(b.distributor.display ? [["Forgalmazó", b.distributor.display] as [string, string]] : [])] },
+      { type: "kv", rows: [["Tárolási mód", b.storageMode.display, "storageMode"], ["Tárolás", b.storage.display, "storage"], ["Gyártó", b.manufacturer.display, "manufacturer"], ["Forgalmazó", b.distributor.display, "distributor"], ["Minőségmegőrzés", b.bestBeforeWording.display, "bestBeforeWording"]] },
+      { type: "heading", text: "Jogszabályi információ" },
+      { type: "kv", rows: [["Jogszabály azonosító", b.legalRef.display, "legalRef"]] },
+      { type: "para", text: b.legalText.display, field: "legalText" },
     ],
   };
   const packBlocks: Block[] = [{ type: "heading", text: b.marketingName.display || name }];
-  if (b.description.display) packBlocks.push({ type: "para", text: b.description.display });
-  packBlocks.push({ type: "rich", segments: [{ text: "Összetevők: ", emph: true }, ...ds.ingredientSegments, { text: "." }] });
+  packBlocks.push({ type: "para", text: b.description.display, field: "description" });
+  packBlocks.push({ type: "rich", segments: ds.ingredientSegments, field: "ingredientText", prefix: [{ text: "Összetevők: ", emph: true }], suffix: [{ text: "." }] });
   if (ds.allergens.length)
     packBlocks.push({ type: "para", text: `Allergén információ: a kiemelt összetevők allergént tartalmaznak (${ds.allergens.join(", ")}).` });
   packBlocks.push(nutritionTable("pack"));
-  if (b.productWeight.display) packBlocks.push({ type: "para", text: `Nettó tömeg: ${b.productWeight.display}` });
-  if (b.storage.display) packBlocks.push({ type: "para", text: `Tárolás: ${b.storage.display}` });
-  if (b.manufacturer.display) packBlocks.push({ type: "para", text: `Gyártó: ${b.manufacturer.display}` });
-  if (b.distributor.display) packBlocks.push({ type: "para", text: `Forgalmazó: ${b.distributor.display}` });
+  packBlocks.push({ type: "para", text: b.productWeight.display, field: "productWeight", prefix: "Nettó tömeg: " });
+  packBlocks.push({ type: "para", text: b.storageMode.display, field: "storageMode", prefix: "Tárolási mód: " });
+  packBlocks.push({ type: "para", text: b.storage.display, field: "storage", prefix: "Tárolás: " });
+  packBlocks.push({ type: "para", text: `${b.bestBeforeWording.display} lásd a csomagoláson`, field: "bestBeforeWording", prefix: "" });
+  packBlocks.push({ type: "para", text: b.manufacturer.display, field: "manufacturer", prefix: "Gyártó: " });
+  if (b.distributor.display) packBlocks.push({ type: "para", text: b.distributor.display, field: "distributor", prefix: "Forgalmazó: " });
   const pack: DocModel = {
     kind: "pack",
     title: DOC_TITLES.pack,
