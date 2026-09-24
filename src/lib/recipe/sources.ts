@@ -326,7 +326,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     if (ext === "pdf") blocks = await pdfBlocks(buf);
     else if (ext === "docx") blocks = await docxBlocks(buf);
     else if (ext === "xls" || ext === "xlsx") blocks = sheetBlocks(buf);
-    let legacyPartial = false;
+    let legacyPartial = false; void legacyPartial;
     if (ext === "doc") {
       const converted = await convertLegacyDocLocally(buf);
       if (converted) {
@@ -348,7 +348,6 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     Object.assign(sf, x);
     sf.detectedMaterial = x.fields.find((f) => f.key === "product_description")?.value;
     if (ext === "doc") sf.status = "review";
-    if (legacyPartial) sf.fields = sf.fields.map((f) => ({ ...f, confidence: "low" as never }));
     if (x.fields.length < 2) {
       sf.status = "review";
       sf.warnings.push("Kevés adat azonosítható automatikusan.");
@@ -470,6 +469,6 @@ export function demoSpecFiles(): SourceFile[] {
       { key: "q.ph", label: "pH", value: "3,7", num: 3.7, unit: "", tolerance: "±0,3", method: "pH-mérő", page: 4, outputs: ["sheet", "spec"] },
       { key: "q.brix", label: "Oldható szárazanyag", value: "45,0", num: 45, unit: "°Bx", tolerance: "±2,0", method: "refraktométer", page: 4, outputs: ["sheet", "spec"] },
       { key: "q.density", label: "Sűrűség", value: "1,25", num: 1.25, unit: "kg/dm3", tolerance: "±3%", method: "számított érték", page: 4, outputs: ["sheet", "spec"] },
-    ], [], [], "review", ["Régi Word (.doc) formátum: a szöveg csak részlegesen olvasható. Javasolt helyi konverzió DOCX-re."]),
+    ], [], [], "review", ["! Régi Word formátum – ellenőrzés szükséges"]),
   ];
 }
