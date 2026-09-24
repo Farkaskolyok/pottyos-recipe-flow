@@ -1,6 +1,6 @@
 // Core domain model. UI-independent; all processing is local (browser).
 
-export type Origin = "source" | "calculated" | "manual" | "company" | "regulatory";
+export type Origin = "source" | "calculated" | "manual" | "company" | "regulatory" | "ai";
 export type MatchStatus = "recognized" | "review" | "unknown";
 export type CheckLevel = "ok" | "warn" | "error";
 export type ProductStatus = "draft" | "processing" | "review" | "approved" | "archived";
@@ -51,6 +51,8 @@ export interface TracedValue {
   source?: SourceRef;
   rule?: string;
   manual?: { by: string; at: string; note?: string; previous: string };
+  /** AI_EXTRACTED value with full traceability */
+  ai?: import("./ai").AiValue;
 }
 
 export interface RawIngredientRow {
@@ -150,4 +152,6 @@ export interface Product {
     { choice: "recipe" | "spec" | "manual"; value: number; by: string; at: string }
   >;
   audit?: { at: string; by: string; text: string }[];
+  /** AI-derived values (fallback layer), kept separately from source/manual values */
+  aiValues?: Record<string, import("./ai").AiValue>;
 }

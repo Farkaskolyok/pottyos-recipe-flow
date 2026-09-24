@@ -65,6 +65,7 @@ export function OriginTag({ origin }: { origin: Origin }) {
     manual: "Manuális",
     company: "Céges fix",
     regulatory: "Jogszabályi",
+    ai: "AI – forrásból",
   }[origin];
   return (
     <span

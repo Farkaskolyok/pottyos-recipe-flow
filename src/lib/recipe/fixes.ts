@@ -23,6 +23,8 @@ export interface FixTarget {
 export function fixTarget(c: Check): FixTarget {
   if (c.id === "doc-diff")
     return { step: "Dokumentumok", anchor: "doc-diffs", label: "ELTÉRÉSEK MEGNYITÁSA" };
+  if (c.id === "ai-review")
+    return { step: "Források", anchor: "AI adatellenőrzés", label: "ELLENŐRZÉS" };
   switch (c.action) {
     case "resolve-ingredients":
       return { step: "Alapanyagok", anchor: "ingredients", label: "ALAPANYAGOK JAVÍTÁSA" };
