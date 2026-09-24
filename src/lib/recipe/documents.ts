@@ -31,7 +31,28 @@ export interface DocModel {
   blocks: Block[];
   /** values used by this document, for cross-document validation */
   used: Record<string, string>;
+  /** slot values for the approved master Word template */
+  fields: Record<string, string>;
+  rich: Record<string, Segment[]>;
 }
+
+const AL_KEYS: [string, RegExp][] = [
+  ["gluten", /glutén|búza|zab|rozs|árpa|tönköly|kamut/i],
+  ["crustaceans", /rák/i],
+  ["egg", /tojás/i],
+  ["fish", /(^|\s)hal/i],
+  ["peanut", /földimogyoró/i],
+  ["soy", /szój/i],
+  ["milk", /tej|laktóz/i],
+  ["nuts", /dió|mandula|(?<!földi)mogyoró|kesu|pisztácia|pekán/i],
+  ["celery", /zeller/i],
+  ["mustard", /mustár/i],
+  ["sesame", /szezám/i],
+  ["sulphites", /kén-dioxid|szulfit/i],
+  ["lupin", /csillagfürt/i],
+  ["molluscs", /puhatestű/i],
+  ["licorice", /édesgyökér/i],
+];
 
 export const DOC_TITLES: Record<Destination, string> = {
   sheet: "Gyártmánylap",
