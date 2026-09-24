@@ -1,9 +1,9 @@
 // Core domain model. UI-independent; all processing is local (browser).
 
-export type Origin = "source" | "calculated" | "manual";
+export type Origin = "source" | "calculated" | "manual" | "company" | "regulatory";
 export type MatchStatus = "recognized" | "review" | "unknown";
 export type CheckLevel = "ok" | "warn" | "error";
-export type ProductStatus = "draft" | "review" | "approved" | "archived";
+export type ProductStatus = "draft" | "processing" | "review" | "approved" | "archived";
 
 export const NUTRIENTS = [
   "energyKj",
@@ -35,6 +35,9 @@ export interface SourceRef {
   file: string;
   sheet: string;
   cell: string;
+  page?: number;
+  sourceType?: string;
+  fileId?: string;
 }
 
 /** Traceable value: original, calculated and displayed are kept separately. */
@@ -101,7 +104,7 @@ export interface Check {
   id: string;
   level: CheckLevel;
   text: string;
-  action?: "resolve-ingredients" | "set-value" | "regulatory";
+  action?: "resolve-ingredients" | "set-value" | "regulatory" | "sources";
   field?: string;
 }
 
@@ -130,4 +133,9 @@ export interface Product {
   ingredientTextMeta?: { by: string; at: string; previous: string };
   regulatoryAck?: Record<string, { by: string; at: string }>;
   history: VersionEntry[];
+  /** Multi-file product package (recipe + specifications + references). Content is never stored, only extracted data. */
+  files?: import("./sources").SourceFile[];
+  /** Conflict decisions keyed by conflict id */
+  conflictDecisions?: Record<string, { choice: "recipe" | "spec" | "manual"; value: number; by: string; at: string }>;
+  audit?: { at: string; by: string; text: string }[];
 }

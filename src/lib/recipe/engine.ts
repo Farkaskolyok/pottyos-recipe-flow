@@ -11,6 +11,7 @@ import { NUTRIENTS, NUTRIENT_LABELS } from "./types";
 import { matchIngredient } from "./dictionary";
 import { roundNutrient, ruleLabel } from "./rules";
 import { huNumber } from "./format";
+import { findConflicts } from "./sources";
 
 export type AllergenFormat = "bold" | "uppercase" | "bold-uppercase";
 export type Destination = "sheet" | "spec" | "pack";
@@ -163,8 +164,9 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
   // ---- nutrition: calculate first, round last
   const ings = p.ingredients;
   const totalQty = ings.reduce((s, i) => s + (i.raw.quantity ?? 0), 0);
-  const sum = (k: string) =>
-    totalQty ? ings.reduce((s, i) => s + (i.raw.quantity ?? 0) * ((i.raw.nutrients as Record<string, number>)[k] ?? 0), 0) / totalQty : 0;
+  const dec = p.conflictDecisions ?? {};
+  const nv = (i: (typeof ings)[number], k: string) => dec[`ing.${i.raw.row}.${k}`]?.value ?? (i.raw.nutrients as Record<string, number>)[k] ?? 0;
+  const sum = (k: string) => (totalQty ? ings.reduce((s, i) => s + (i.raw.quantity ?? 0) * nv(i, k), 0) / totalQty : 0);
   const hasEnergy = ings.some((i) => i.raw.nutrients.energyKj != null);
   const per100: Record<string, number> = {};
   for (const k of NUTRIENTS) per100[k] = sum(k);
@@ -279,6 +281,23 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
   for (const k of ["bestBeforeWording", "legalText"]) {
     if (p.overrides[k] && !p.regulatoryAck?.[k])
       checks.push({ id: `reg-${k}`, level: "error", text: `JOGSZABÁLYI ELLENŐRZÉS SZÜKSÉGES: ${basics[k].label}`, action: "regulatory", field: k });
+  }
+
+  // ---- multi-file package checks
+  const files = p.files ?? [];
+  if (files.length) {
+    const specs = files.filter((f) => f.sourceType !== "HISTORICAL_REFERENCE");
+    const unreadable = files.filter((f) => f.status === "unreadable").length;
+    const suggested = files.filter((f) => f.linkState === "suggested").length;
+    const open = findConflicts(p).filter((c) => !dec[c.id]).length;
+    const unk = files.reduce((n, f) => n + f.unknown.filter((u) => !u.decision).length, 0);
+    const reg = files.reduce((n, f) => n + f.regulatory.filter((r) => r.status === "review").length, 0);
+    checks.push({ id: "src-specs", level: "ok", text: `${specs.length} alapanyag specifikáció beolvasva` });
+    if (unreadable) checks.push({ id: "src-unread", level: "warn", text: `${unreadable} fájl nem olvasható`, action: "sources" });
+    if (suggested) checks.push({ id: "src-link", level: "warn", text: `${suggested} bizonytalan alapanyag-kapcsolat`, action: "sources" });
+    if (open) checks.push({ id: "src-conf", level: "error", text: `${open} ütköző érték (ELTÉRŐ ADATOK)`, action: "sources" });
+    if (unk) checks.push({ id: "src-unk", level: "warn", text: `${unk} új / nem besorolt adat`, action: "sources" });
+    if (reg) checks.push({ id: "src-reg", level: "error", text: `JOGSZABÁLYI ELLENŐRZÉS: ${reg} hivatkozás ellenőrzendő`, action: "sources" });
   }
 
   const counts = {

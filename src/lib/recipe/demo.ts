@@ -3,6 +3,7 @@ import type { DictionaryEntry, Product } from "./types";
 import { parseWorkbook } from "./parse";
 import { resolveIngredients } from "./engine";
 import { uid } from "./format";
+import { applyLinkSuggestions, demoSpecFiles } from "./sources";
 
 // Entirely fictional demo recipes. Values are invented for demonstration only.
 type Row = [string, string, string, number, number, number, number, number, number, number, number, number];
@@ -53,6 +54,19 @@ export const DEMO_RECIPES: DemoRecipe[] = [
       ["Kakaós étbevonó KB-12", "DM-2012", "Demo Csokoládé Kft.", 28, 5.2, 54.8, 48.1, 32.6, 19.4, 0.04, 6.1, 99],
       ["Kristálycukor", "DM-3001", "Demo Cukor Zrt.", 9, 0, 99.9, 99.9, 0, 0, 0, 0, 99.9],
       ["Eper készítmény EK-5", "", "Demo Gyümölcs Kft.", 5, 0.4, 45, 42, 0.1, 0, 0.01, 1.2, 48],
+    ],
+  },
+  {
+    key: "raspberry",
+    productName: "Pöttyös Demo Málnás Müzlis",
+    weight: 38,
+    version: "R-3.0",
+    rows: [
+      ["Sovány túró 40+", "DM-1001", "Demo Tejüzem", 50, 12.4, 3.6, 3.4, 4.1, 2.6, 0.08, 0, 22.5],
+      ["Joghurtos bevonómassza", "DM-2050", "Demo Bevonó Kft.", 32, 6.1, 55.2, 52.4, 34.5, 29.8, 0.09, 0.4, 99],
+      ["Málna-müzli", "DM-6020", "Demo Müzli Zrt.", 10, 8.2, 64.1, 21.5, 6.3, 1.1, 0.02, 7.4, 92],
+      ["Inulin", "DM-5010", "Demo Fibre Ltd.", 7, 0, 5, 5, 0, 0, 0, 90, 95],
+      ["Raspberry flavour mix AR-7", "", "Demo Aroma Bt.", 1, 0, 0, 0, 0, 0, 0, 0, 40],
     ],
   },
 ];
@@ -128,5 +142,17 @@ export function seedProducts(dict: DictionaryEntry[], user: string): Product[] {
   straw.createdAt = day(1);
   straw.updatedAt = day(1);
   straw.history = [{ version: "v1.0", date: day(1), note: "Recept beolvasva" }];
-  return [straw, cocoa];
+  return [demoPackageProduct(dict, user), straw, cocoa];
+}
+
+/** Fictional multi-file product: 1 recipe + 4 specifications. */
+export function demoPackageProduct(dict: DictionaryEntry[], user: string, recipeFile?: { name: string; size: number }): Product {
+  const d = DEMO_RECIPES[3];
+  const name = recipeFile?.name ?? `Demo_${d.key}_recipe.xlsx`;
+  const p = newProduct(parseWorkbook(buildDemoWorkbook(d), name, recipeFile?.size ?? 21_000), dict, user);
+  p.status = "review";
+  p.files = applyLinkSuggestions(demoSpecFiles(), p.ingredients.map((i) => ({ row: i.raw.row, name: i.raw.name })));
+  p.history = [{ version: "v1.0", date: p.createdAt, note: "Termékcsomag beolvasva (1 recept, 4 specifikáció)" }];
+  p.audit = [{ at: p.createdAt, by: user, text: "Termékcsomag helyben feldolgozva" }];
+  return p;
 }

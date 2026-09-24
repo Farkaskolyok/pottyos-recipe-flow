@@ -20,6 +20,8 @@ import { LevelIcon, MatchPill, OriginTag, Panel, StatusPill } from "@/components
 import { DocPreview } from "@/components/rf/DocPreview";
 import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineField";
 import { cn } from "@/lib/utils";
+import { SourcesStep } from "@/components/rf/SourcesStep";
+import { openSource } from "@/lib/recipe/sources";
 
 export const Route = createFileRoute("/termekek/$id")({
   head: () => ({
@@ -33,7 +35,7 @@ export const Route = createFileRoute("/termekek/$id")({
   component: ProductPage,
 });
 
-const STEPS = ["Alapanyagok", "Adatok", "Ellenőrzés", "Dokumentumok", "Jóváhagyás"] as const;
+const STEPS = ["Források", "Alapanyagok", "Adatok", "Ellenőrzés", "Dokumentumok", "Jóváhagyás"] as const;
 type Step = (typeof STEPS)[number];
 
 function bump(p: Product, note: string): Product {
@@ -46,7 +48,7 @@ function ProductPage() {
   const { id } = Route.useParams();
   const store = useStore();
   const p = store.getProduct(id);
-  const [step, setStep] = useState<Step>("Alapanyagok");
+  const [step, setStep] = useState<Step>(() => (store.getProduct(id)?.files?.length ? "Források" : "Alapanyagok"));
   const [trace, setTrace] = useState<{ key: string; v: TracedValue } | null>(null);
 
   const ds = useMemo(() => (p ? buildDataset(p, store.dictionary, store.settings) : null), [p, store.dictionary, store.settings]);
@@ -67,6 +69,7 @@ function ProductPage() {
   const name = ds.basics.productName.display || p.raw.fileName;
   const pending = p.ingredients.filter((i) => i.status !== "recognized").length;
   const stepDone: Record<Step, boolean> = {
+    Források: !ds.checks.some((c) => c.action === "sources"),
     Alapanyagok: pending === 0,
     Adatok: !!ds.weightG && !!ds.basics.productName.display,
     Ellenőrzés: ds.counts.error === 0 && ds.counts.warn === 0,
@@ -142,7 +145,7 @@ function ProductPage() {
       </div>
 
       {/* Hol tartok? */}
-      <ol className="mb-8 grid grid-cols-5 gap-1.5">
+      <ol className="mb-8 grid grid-cols-6 gap-1.5">
         {STEPS.map((s, i) => (
           <li key={s}>
             <button
@@ -166,6 +169,26 @@ function ProductPage() {
         ))}
       </ol>
 
+      {step === "Források" &&
+        (p.files?.length ? (
+          <SourcesStep
+            p={p}
+            admin={store.admin}
+            user={store.settings.userName}
+            companyFixed={[
+              { label: "Elfogadhatósági tartomány", value: ds.basics.acceptanceRange.display },
+              { label: "Jogszabályi szöveg", value: ds.basics.legalText.display },
+              { label: "Gyártó", value: ds.basics.manufacturer.display },
+            ]}
+            onChange={(next, note) => touch(next, note)}
+            onTrace={(key, v) => setTrace({ key, v })}
+            onNext={() => setStep("Alapanyagok")}
+          />
+        ) : (
+          <Panel>
+            <p className="text-sm text-muted-foreground">Ehhez a termékhez csak receptúra tartozik. Specifikációkat új termék létrehozásakor lehet csatolni.</p>
+          </Panel>
+        ))}
       {step === "Alapanyagok" && <IngredientsStep p={p} onSave={save} onNext={() => setStep("Adatok")} />}
       {step === "Adatok" && (
         <DataStep
@@ -188,6 +211,11 @@ function ProductPage() {
                 <span className="flex-1 font-medium">{c.text}</span>
                 {c.action === "resolve-ingredients" && (
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Alapanyagok")}>
+                    Megoldás
+                  </Button>
+                )}
+                {c.action === "sources" && (
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Források")}>
                     Megoldás
                   </Button>
                 )}
@@ -565,6 +593,8 @@ function TraceDrawer({ trace, onClose }: { trace: { key: string; v: TracedValue 
   const rows: [string, string][] = v
     ? [
         ["Forrásfájl", v.source?.file ?? "—"],
+        ["Forrástípus", v.source?.sourceType ?? (v.source ? "Receptúra" : "—")],
+        ["Oldal", v.source?.page ? String(v.source.page) : "—"],
         ["Munkalap", v.source?.sheet ?? "—"],
         ["Forrás", v.source?.cell ?? (v.origin === "calculated" ? "számított érték" : "—")],
         ["Eredeti érték", v.original == null ? "—" : String(v.original)],
@@ -592,6 +622,17 @@ function TraceDrawer({ trace, onClose }: { trace: { key: string; v: TracedValue 
                 </div>
               ))}
             </dl>
+            {v.source?.fileId && (
+              <Button
+                variant="outline"
+                className="mt-4 rounded-full"
+                onClick={() => {
+                  if (!openSource(v.source?.fileId, v.source?.page)) toast.info("A forrásfájl ebben a munkamenetben nem érhető el (a tartalmat nem tároljuk). Nyisd meg helyben.");
+                }}
+              >
+                Forrás megnyitása
+              </Button>
+            )}
             {v.manual && (
               <div className="mt-4 rounded-xl bg-muted p-3 text-sm">
                 <p className="font-semibold">Manuálisan módosított</p>

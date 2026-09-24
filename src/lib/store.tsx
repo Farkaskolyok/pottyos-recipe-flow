@@ -3,7 +3,7 @@ import type { DictionaryEntry, Product } from "./recipe/types";
 import { DEMO_DICTIONARY } from "./recipe/dictionary";
 import { DEFAULT_SETTINGS, type Settings } from "./recipe/engine";
 import { DEFAULT_RULES, type RuleDef } from "./recipe/rules";
-import { seedProducts } from "./recipe/demo";
+import { demoPackageProduct, seedProducts } from "./recipe/demo";
 import { DEFAULT_CATEGORIES } from "./recipe/fields";
 
 type Categories = Record<string, { label: string; options: string[] }>;
@@ -55,7 +55,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(KEY);
       const base = initial();
       const saved = raw ? JSON.parse(raw) : null;
-      setState(saved ? { ...base, ...saved, settings: { ...base.settings, ...saved.settings }, categories: { ...base.categories, ...saved.categories } } : base);
+      if (saved) {
+        const dictionary: DictionaryEntry[] = [...saved.dictionary, ...DEMO_DICTIONARY.filter((d) => !saved.dictionary.some((x: DictionaryEntry) => x.id === d.id))];
+        const products: Product[] = saved.products.some((p: Product) => p.files?.length) ? saved.products : [demoPackageProduct(dictionary, base.settings.userName), ...saved.products];
+        setState({ ...base, ...saved, dictionary, products, settings: { ...base.settings, ...saved.settings }, categories: { ...base.categories, ...saved.categories } });
+      } else setState(base);
     } catch {
       setState(initial());
     }
