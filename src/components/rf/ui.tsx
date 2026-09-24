@@ -5,6 +5,7 @@ import type { CheckLevel, MatchStatus, Origin, ProductStatus } from "@/lib/recip
 
 export const PRODUCT_STATUS: Record<ProductStatus, string> = {
   draft: "Vázlat",
+  processing: "Feldolgozás",
   review: "Ellenőrzés alatt",
   approved: "Jóváhagyva",
   archived: "Archivált",
@@ -13,6 +14,7 @@ export const PRODUCT_STATUS: Record<ProductStatus, string> = {
 export function StatusPill({ status }: { status: ProductStatus }) {
   const cls = {
     draft: "bg-muted text-muted-foreground",
+    processing: "bg-muted text-foreground",
     review: "bg-warning-soft text-foreground",
     approved: "bg-success-soft text-success",
     archived: "bg-secondary text-muted-foreground",
@@ -43,7 +45,7 @@ export function MatchPill({ status }: { status: MatchStatus }) {
 }
 
 export function OriginTag({ origin }: { origin: Origin }) {
-  const m = { source: "Forrás", calculated: "Számított", manual: "Manuális" }[origin];
+  const m = { source: "Forrás", calculated: "Számított", manual: "Manuális", company: "Céges fix", regulatory: "Jogszabályi" }[origin];
   return (
     <span
       className={cn(
