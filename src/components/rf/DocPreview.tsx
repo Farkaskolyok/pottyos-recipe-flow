@@ -1,4 +1,5 @@
-import type { DocModel } from "@/lib/recipe/documents";
+import type { DocModel, KVRow } from "@/lib/recipe/documents";
+import { InlineField } from "./InlineField";
 
 export function DocPreview({ doc }: { doc: DocModel }) {
   return (
@@ -19,16 +20,37 @@ export function DocPreview({ doc }: { doc: DocModel }) {
             );
           case "para":
             return (
-              <p key={i} className="mb-2">
-                {b.text}
+              <div key={i} className="mb-2">
+                {b.field ? (
+                  <InlineField fieldKey={b.field} block={b.text.length > 60}>
+                    <span>
+                      {b.prefix}
+                      {b.text || "—"}
+                    </span>
+                  </InlineField>
+                ) : (
+                  b.text
+                )}
+              </div>
+            );
+          case "rich": {
+            const body = (
+              <p>
+                {[...(b.prefix ?? []), ...b.segments, ...(b.suffix ?? [])].map((s, j) => (s.emph ? <b key={j}>{s.text}</b> : <span key={j}>{s.text}</span>))}
               </p>
             );
-          case "rich":
             return (
-              <p key={i} className="mb-2">
-                {b.segments.map((s, j) => (s.emph ? <b key={j}>{s.text}</b> : <span key={j}>{s.text}</span>))}
-              </p>
+              <div key={i} className="mb-2">
+                {b.field ? (
+                  <InlineField fieldKey={b.field} block>
+                    {body}
+                  </InlineField>
+                ) : (
+                  body
+                )}
+              </div>
             );
+          }
           case "kv":
             return <KV key={i} rows={b.rows} />;
           case "table":
@@ -65,15 +87,15 @@ export function DocPreview({ doc }: { doc: DocModel }) {
   );
 }
 
-function KV({ rows }: { rows: [string, string][] }) {
+function KV({ rows }: { rows: KVRow[] }) {
   if (!rows.length) return null;
   return (
     <table className="mb-2 w-full border-collapse">
       <tbody>
-        {rows.map(([k, v]) => (
+        {rows.map(([k, v, f]) => (
           <tr key={k}>
-            <td className="w-[35%] border bg-muted px-2 py-1.5 font-semibold">{k}</td>
-            <td className="border px-2 py-1.5">{v || "—"}</td>
+            <td className="w-[35%] border bg-muted px-2 py-1.5 align-top font-semibold">{k}</td>
+            <td className="border px-2 py-1.5">{f ? <InlineField fieldKey={f} /> : v || "—"}</td>
           </tr>
         ))}
       </tbody>
