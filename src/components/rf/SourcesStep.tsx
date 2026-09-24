@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { FileText, ChevronRight } from "lucide-react";
+import { FileText, ChevronRight, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LevelIcon, Panel } from "@/components/rf/ui";
 import { FileStatusBadge, RegBadge } from "@/components/rf/SourceBits";
 import type { CheckLevel, Product, TracedValue } from "@/lib/recipe/types";
-import { findConflicts, SOURCE_TYPE_LABELS, type ExtractedField, type RegStatus, type SourceFile, type SourceType } from "@/lib/recipe/sources";
+import { openSource, findConflicts, SOURCE_TYPE_LABELS, type ExtractedField, type RegStatus, type SourceFile, type SourceType } from "@/lib/recipe/sources";
 import { huNumber } from "@/lib/recipe/format";
 import { cn } from "@/lib/utils";
 
@@ -105,15 +106,17 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
             <span className="min-w-0 flex-1 truncate font-medium">{p.raw.fileName}</span>
             <span className="hidden text-xs text-muted-foreground sm:inline">Receptúra</span>
             <FileStatusBadge status="ok" />
+            <OpenBtn id={`recipe:${p.id}`} />
           </li>
           {files.map((f) => (
-            <li key={f.id}>
-              <button onClick={() => setOpenFile(f)} className="flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm hover:bg-muted/60">
+            <li key={f.id} className="flex items-center gap-2">
+              <button onClick={() => setOpenFile(f)} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm hover:bg-muted/60">
                 <FileText className="size-4 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate font-medium">{f.name}</span>
                 <span className="hidden text-xs text-muted-foreground sm:inline">{SOURCE_TYPE_LABELS[f.sourceType]}</span>
                 <FileStatusBadge status={f.status} />
               </button>
+              <OpenBtn id={f.id} />
             </li>
           ))}
         </ul>
@@ -433,5 +436,23 @@ function FieldBlock({ title, items, onTrace, ingName, empty }: { title: string; 
         <p className="text-sm text-muted-foreground">{empty ?? "Nincs adat a specifikációkban."}</p>
       )}
     </Block>
+  );
+}
+
+function OpenBtn({ id }: { id: string }) {
+  return (
+    <button
+      type="button"
+      aria-label="Forrás megnyitása"
+      title="Forrás megnyitása (helyben tárolt eredeti)"
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-primary"
+      onClick={() =>
+        void openSource(id).then((ok) => {
+          if (!ok) toast.info("Az eredeti fájl nincs eltárolva ezen az eszközön.");
+        })
+      }
+    >
+      <ExternalLink className="size-4" />
+    </button>
   );
 }
