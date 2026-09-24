@@ -11,7 +11,7 @@ import { NUTRIENTS, NUTRIENT_LABELS } from "./types";
 import { matchIngredient } from "./dictionary";
 import { roundNutrient, ruleLabel } from "./rules";
 import { huNumber } from "./format";
-import { findConflicts } from "./sources";
+import { findConflicts, regBad, regStatus } from "./sources";
 
 export type AllergenFormat = "bold" | "uppercase" | "bold-uppercase";
 export type Destination = "sheet" | "spec" | "pack";

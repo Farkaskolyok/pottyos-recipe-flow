@@ -37,7 +37,7 @@ export function fixTarget(c: Check): FixTarget {
         return { step: "Források", anchor: "Eltérő adatok", label: "ELTÉRÉSEK MEGNYITÁSA" };
       if (c.id === "src-unk")
         return { step: "Források", anchor: "Új / nem besorolt adat", label: "JAVÍTÁS" };
-      if (c.id === "src-reg")
+      if (c.id === "src-reg" || c.id === "src-reg-bad")
         return { step: "Források", anchor: "Jogszabályi ellenőrzés", label: "ELLENŐRZÉS" };
       return { step: "Források", anchor: "Dokumentumok", label: "JAVÍTÁS" };
   }
