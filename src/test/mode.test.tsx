@@ -94,11 +94,10 @@ describe("mode switching in the UI", () => {
       });
       return <span>{s.ready ? `n=${s.products.length}/${s.allProducts.length}` : "…"}</span>;
     }
-    const { Route: Home } = await import("@/routes/index");
-    const H = Home.options.component as () => React.ReactElement;
+    const { ModeSwitch } = await import("@/components/rf/ModeSwitch");
     render(
       <StoreProvider>
-        <H />
+        <ModeSwitch />
         <Probe />
       </StoreProvider>,
     );
