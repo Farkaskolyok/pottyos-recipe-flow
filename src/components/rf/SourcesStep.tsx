@@ -400,6 +400,7 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
 
 function Block({ title, level, children }: { title: string; level: CheckLevel; children: ReactNode }) {
   return (
+    <div data-anchor={title} className="rounded-2xl">
     <Panel>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="font-bold uppercase tracking-wide">{title}</h2>
@@ -407,6 +408,7 @@ function Block({ title, level, children }: { title: string; level: CheckLevel; c
       </div>
       {children}
     </Panel>
+    </div>
   );
 }
 

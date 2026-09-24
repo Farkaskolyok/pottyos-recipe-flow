@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, Pencil, RotateCcw, Check as CheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineF
 import { cn } from "@/lib/utils";
 import { SourcesStep } from "@/components/rf/SourcesStep";
 import { openSource } from "@/lib/recipe/sources";
+import { blockingFor, fixTarget, openIssues, STEPS, stepCounters, type Step } from "@/lib/recipe/fixes";
+import type { Check } from "@/lib/recipe/types";
 
 export const Route = createFileRoute("/termekek/$id")({
   head: () => ({
@@ -35,8 +37,6 @@ export const Route = createFileRoute("/termekek/$id")({
   component: ProductPage,
 });
 
-const STEPS = ["Források", "Alapanyagok", "Adatok", "Ellenőrzés", "Dokumentumok", "Jóváhagyás"] as const;
-type Step = (typeof STEPS)[number];
 
 function bump(p: Product, note: string): Product {
   const [maj, min] = p.docVersion.replace("v", "").split(".").map(Number);
@@ -53,6 +53,24 @@ function ProductPage() {
 
   const ds = useMemo(() => (p ? buildDataset(p, store.dictionary, store.settings) : null), [p, store.dictionary, store.settings]);
   const docs = useMemo(() => (p && ds ? buildDocs(p, ds, store.dictionary, store.settings) : null), [p, ds, store.dictionary, store.settings]);
+  const [focus, setFocus] = useState<{ anchor?: string; field?: string; n: number } | null>(null);
+  const [focusField, setFocusField] = useState<string | null>(null);
+  const fixing = useRef<string | null>(null);
+  const [blocked, setBlocked] = useState<Check[] | null>(null);
+
+  // Smart navigation: after a JAVÍTÁS click, scroll to the target and highlight it briefly.
+  useEffect(() => {
+    if (!focus?.anchor) return;
+    const t = window.setTimeout(() => {
+      const el = Array.from(document.querySelectorAll<HTMLElement>("[data-anchor]")).find((e) => e.dataset.anchor === focus.anchor);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.remove("rf-flash");
+      void el.offsetWidth;
+      el.classList.add("rf-flash");
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [focus, step]);
 
   if (!store.ready) return <p className="text-muted-foreground">Betöltés…</p>;
   if (!p || !ds || !docs)
@@ -66,6 +84,31 @@ function ProductPage() {
     );
 
   const save = (next: Product) => store.upsertProduct(next);
+  const diffs = crossCheck(docs);
+  const checks: Check[] = diffs.length
+    ? [...ds.checks, { id: "doc-diff", level: "warn", text: `Dokumentumok között eltérés van (${diffs.length} mező)` }]
+    : ds.checks;
+  const counters = stepCounters(checks);
+  const goFix = (c: Check) => {
+    const t = fixTarget(c);
+    setBlocked(null);
+    setStep(t.step);
+    fixing.current = t.field ?? null;
+    setFocusField(t.field ?? null);
+    setFocus({ anchor: t.anchor, field: t.field, n: Date.now() });
+  };
+  const goStep = (dir: 1 | -1) => {
+    const i = STEPS.indexOf(step);
+    const next = STEPS[i + dir];
+    if (!next) return;
+    if (dir === 1) {
+      const b = blockingFor(step, checks);
+      if (b.length) return setBlocked(b);
+    }
+    setBlocked(null);
+    setStep(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const name = ds.basics.productName.display || p.raw.fileName;
   const pending = p.ingredients.filter((i) => i.status !== "recognized").length;
   const stepDone: Record<Step, boolean> = {
@@ -97,7 +140,13 @@ function ProductPage() {
   };
   const api: EditApi = {
     get: getValue,
+    focusKey: focusField,
+    clearFocus: () => setFocusField(null),
     set: (key, value, note, scope) => {
+      if (fixing.current === key) {
+        fixing.current = null;
+        toast.success("✓ Javítva", { action: { label: "Vissza az ellenőrzéshez", onClick: () => setStep("Ellenőrzés") } });
+      }
       const cur = getValue(key);
       const label = cur?.label ?? key;
       if (scope === "default" && key === "acceptanceRange") {
@@ -149,7 +198,7 @@ function ProductPage() {
         {STEPS.map((s, i) => (
           <li key={s}>
             <button
-              onClick={() => setStep(s)}
+              onClick={() => { setBlocked(null); setStep(s); }}
               className={cn(
                 "flex w-full flex-col items-center gap-1.5 rounded-xl px-1 py-2.5 text-xs font-medium transition-colors sm:flex-row sm:justify-center sm:text-sm",
                 step === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
@@ -164,6 +213,7 @@ function ProductPage() {
                 {stepDone[s] && step !== s ? <CheckIcon className="size-3.5" /> : i + 1}
               </span>
               <span className="hidden sm:inline">{s}</span>
+              <StepCounter s={s} c={counters[s]} done={stepDone[s]} p={p} diffs={diffs.length} active={step === s} />
             </button>
           </li>
         ))}
@@ -182,7 +232,7 @@ function ProductPage() {
             ]}
             onChange={(next, note) => touch(next, note)}
             onTrace={(key, v) => setTrace({ key, v })}
-            onNext={() => setStep("Alapanyagok")}
+            onNext={() => goStep(1)}
           />
         ) : (
           <Panel>
@@ -199,55 +249,16 @@ function ProductPage() {
         />
       )}
       {step === "Ellenőrzés" && (
-        <Panel>
-          <h2 className="mb-1 text-lg font-bold">Ellenőrzés</h2>
-          <p className="mb-5 text-sm text-muted-foreground">
-            {ds.counts.error} hiba · {ds.counts.warn} ellenőrizendő adat
-          </p>
-          <ul className="space-y-2">
-            {ds.checks.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5">
-                <LevelIcon level={c.level} />
-                <span className="flex-1 font-medium">{c.text}</span>
-                {c.action === "resolve-ingredients" && (
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Alapanyagok")}>
-                    Megoldás
-                  </Button>
-                )}
-                {c.action === "sources" && (
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Források")}>
-                    Megoldás
-                  </Button>
-                )}
-                {c.action === "set-value" && c.field && (
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Adatok")}>
-                    Érték megadása
-                  </Button>
-                )}
-                {c.action === "regulatory" && c.field && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-full"
-                    disabled={!store.admin}
-                    title={store.admin ? undefined : "Csak jogosult felhasználó"}
-                    onClick={() => {
-                      if (!window.confirm("Megerősíted, hogy a jogi/szakmai ellenőrzés megtörtént?")) return;
-                      touch({ ...p, regulatoryAck: { ...(p.regulatoryAck ?? {}), [c.field!]: { by: store.settings.userName, at: new Date().toISOString() } } }, "Jogszabályi ellenőrzés elvégezve");
-                    }}
-                  >
-                    Jogi ellenőrzés megtörtént
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6 flex justify-end">
-            <Button className="rounded-full px-6" onClick={() => setStep("Dokumentumok")}>
-              Tovább a dokumentumokhoz
-            </Button>
-          </div>
-        </Panel>
+        <ValidationStep
+          checks={checks}
+          onFix={goFix}
+          admin={store.admin}
+          onAck={(field) => {
+            if (!window.confirm("Megerősíted, hogy a jogi/szakmai ellenőrzés megtörtént?")) return;
+            touch({ ...p, regulatoryAck: { ...(p.regulatoryAck ?? {}), [field]: { by: store.settings.userName, at: new Date().toISOString() } } }, "Jogszabályi ellenőrzés elvégezve");
+            toast.success("✓ Javítva");
+          }}
+        />
       )}
       {step === "Dokumentumok" && <DocsStep docs={docs} onApprove={() => setStep("Jóváhagyás")} />}
       {step === "Jóváhagyás" && (
@@ -256,11 +267,15 @@ function ProductPage() {
           ds={ds}
           docs={docs}
           onBack={() => setStep("Ellenőrzés")}
+          onFix={goFix}
+          checks={checks}
           onApprove={() => {
             save(bump({ ...p, status: "approved", approvedBy: store.settings.userName, reviewedBy: p.reviewedBy ?? store.settings.userName }, "Jóváhagyva"));
           }}
         />
       )}
+
+      <StepFooter step={step} blocked={blocked} onBack={() => goStep(-1)} onNext={() => goStep(1)} onFix={goFix} onForce={() => { setBlocked(null); setStep(STEPS[STEPS.indexOf(step) + 1]); }} />
 
       <Panel className="mt-8">
         <h2 className="mb-3 font-bold">Verziótörténet</h2>
@@ -302,11 +317,8 @@ function IngredientsStep({ p, onSave, onNext }: { p: Product; onSave: (p: Produc
             {pending ? `${pending} alapanyag vár döntésre.` : "Minden alapanyag felismerve."}
           </p>
         </div>
-        <Button className="rounded-full px-6" onClick={onNext}>
-          Tovább
-        </Button>
       </div>
-      <ul className="divide-y rounded-xl border">
+      <ul data-anchor="ingredients" className="divide-y rounded-xl border">
         {sorted.map((i) => {
           const e = i.entryId ? byId.get(i.entryId) : undefined;
           return (
@@ -579,11 +591,6 @@ function DataStep({
         </Panel>
       </div>
 
-      <div className="flex justify-end lg:col-span-2">
-        <Button className="rounded-full px-6" onClick={onNext}>
-          Tovább az ellenőrzéshez
-        </Button>
-      </div>
     </div>
   );
 }
@@ -680,7 +687,7 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
         </div>
       </Panel>
       <Panel>
-        <div className="mb-2 flex items-center justify-between">
+        <div data-anchor="doc-diffs" className="mb-2 flex items-center justify-between rounded-lg">
           <h2 className="font-bold">Dokumentumok összevetése</h2>
           <LevelIcon level={diffs.length ? "warn" : "ok"} className="size-6" />
         </div>
@@ -730,7 +737,11 @@ function ApproveStep({
   docs,
   onApprove,
   onBack,
+  onFix,
+  checks,
 }: {
+  onFix: (c: Check) => void;
+  checks: Check[];
   p: Product;
   ds: ReturnType<typeof buildDataset>;
   docs: Docs;
@@ -777,7 +788,16 @@ function ApproveStep({
       <p className="mb-6 text-sm">
         <b className={ds.counts.error ? "text-destructive" : ""}>{ds.counts.error} hiba</b> · <b>{ds.counts.warn} ellenőrizendő adat</b>
       </p>
-      {blocked && <p className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">Jóváhagyás csak a hibák javítása után lehetséges.</p>}
+      {blocked && (
+        <div className="mb-4">
+          <p className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">Jóváhagyás csak a hibák javítása után lehetséges.</p>
+          <ul className="space-y-2">
+            {checks.filter((c) => c.level === "error").map((c) => (
+              <IssueRow key={c.id} c={c} onFix={onFix} />
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" className="rounded-full" onClick={onBack}>
           Vissza az ellenőrzéshez
@@ -787,5 +807,112 @@ function ApproveStep({
         </Button>
       </div>
     </Panel>
+  );
+}
+
+/* ---------------- step counters, footer, validation task list ---------------- */
+
+function StepCounter({ s, c, done, p, diffs, active }: { s: Step; c: { errors: number; warns: number }; done: boolean; p: Product; diffs: number; active: boolean }) {
+  let txt = "—";
+  let tone = "text-muted-foreground";
+  const n = c.errors + c.warns;
+  if (s === "Jóváhagyás") {
+    if (p.status === "approved") (txt = "✓"), (tone = "text-success");
+  } else if (s === "Dokumentumok") {
+    if (diffs) (txt = String(diffs)), (tone = "text-warning");
+  } else if (s === "Források" && !p.files?.length) {
+    txt = "—";
+  } else if (n) {
+    txt = s === "Források" ? "!" : String(n);
+    tone = c.errors ? "text-destructive" : "text-warning";
+  } else if (done) (txt = "✓"), (tone = "text-success");
+  return (
+    <span aria-label={`${s}: ${txt}`} className={cn("min-w-4 text-xs font-bold tabular-nums", active ? "text-primary-foreground" : tone)}>
+      {txt}
+    </span>
+  );
+}
+
+function IssueRow({ c, i, onFix, extra }: { c: Check; i?: number; onFix: (c: Check) => void; extra?: React.ReactNode }) {
+  const t = fixTarget(c);
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5">
+      {i != null && <span className="w-5 text-sm font-bold text-muted-foreground">{i}.</span>}
+      <LevelIcon level={c.level} />
+      <span className="min-w-0 flex-1 font-medium">{c.text}</span>
+      {extra}
+      <Button size="sm" variant={c.level === "error" ? "default" : "outline"} className="rounded-full font-semibold tracking-wide" onClick={() => onFix(c)}>
+        {t.label}
+      </Button>
+    </li>
+  );
+}
+
+function ValidationStep({ checks, onFix, onAck, admin }: { checks: Check[]; onFix: (c: Check) => void; onAck: (field: string) => void; admin: boolean }) {
+  const open = openIssues(checks).sort((a, b) => (a.level === b.level ? 0 : a.level === "error" ? -1 : 1));
+  const ok = checks.filter((c) => c.level === "ok");
+  return (
+    <Panel>
+      <h2 className="text-lg font-bold uppercase tracking-wide">Ellenőrzés</h2>
+      <p className="mb-5 text-sm text-muted-foreground">{open.length ? `${open.length} javítandó tétel` : "Nincs javítandó tétel"}</p>
+      <ol className="space-y-2">
+        {open.map((c, i) => (
+          <IssueRow
+            key={c.id}
+            c={c}
+            i={i + 1}
+            onFix={onFix}
+            extra={
+              c.action === "regulatory" && c.field ? (
+                <Button size="sm" variant="ghost" className="rounded-full" disabled={!admin} title={admin ? undefined : "Csak jogosult felhasználó"} onClick={() => onAck(c.field!)}>
+                  Jogi ellenőrzés megtörtént
+                </Button>
+              ) : null
+            }
+          />
+        ))}
+      </ol>
+      <details className="mt-5 text-sm">
+        <summary className="cursor-pointer font-semibold text-success">✓ {ok.length} ellenőrzés rendben</summary>
+        <ul className="mt-2 space-y-1 pl-5 text-muted-foreground">
+          {ok.map((c) => (
+            <li key={c.id}>{c.text}</li>
+          ))}
+        </ul>
+      </details>
+    </Panel>
+  );
+}
+
+function StepFooter({ step, blocked, onBack, onNext, onFix, onForce }: { step: Step; blocked: Check[] | null; onBack: () => void; onNext: () => void; onFix: (c: Check) => void; onForce: () => void }) {
+  const i = STEPS.indexOf(step);
+  return (
+    <div className="mt-6">
+      {blocked && blocked.length > 0 && (
+        <Panel className="mb-4">
+          <p className="mb-3 font-bold text-destructive" role="alert">
+            {blocked.length} tételt még javítani kell
+          </p>
+          <ul className="space-y-2">
+            {blocked.map((c) => (
+              <IssueRow key={c.id} c={c} onFix={onFix} />
+            ))}
+          </ul>
+          <button className="mt-3 text-xs text-muted-foreground underline" onClick={onForce}>
+            Továbblépés javítás nélkül (a jóváhagyás zárolva marad)
+          </button>
+        </Panel>
+      )}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" className="rounded-full px-6 font-semibold tracking-wide" disabled={i === 0} onClick={onBack}>
+          VISSZA
+        </Button>
+        {i < STEPS.length - 1 && (
+          <Button className="rounded-full px-6 font-semibold tracking-wide" onClick={onNext}>
+            TOVÁBB
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
