@@ -538,6 +538,11 @@ export function isNoiseText(t: string) {
   const x = t.trim();
   if (x.length < 4) return true;
   if (NOISE.some((r) => r.test(x))) return true;
+  // contact data, markup and binary garbage
+  if (/mailto:|https?:\/\/\S+$|<\/?[a-z:]+[^>]*>|^\+?[\d\s()/-]{7,}$/i.test(x)) return true;
+  if (/^(?:tel|phone|fax|e-?mail|telefon)\b/i.test(x)) return true;
+  if ((x.match(/[^\p{L}\p{N}\s.,:;%°()/+\-–<>=]/gu)?.length ?? 0) > x.length * 0.3) return true;
+  if (/^(?:aláírás|signature|bélyegző|stamp|p\.?\s?h\.?)\b/i.test(x)) return true;
   // standard identifiers only (e.g. "MSZ EN ISO 6579:2006")
   if (!x.replace(STD_REF, "").replace(/[\s:;,.\-–/()]/g, "")) return true;
   const lv = x.match(/^([^:]{2,60}):\s*(.*)$/);

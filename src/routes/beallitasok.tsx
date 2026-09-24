@@ -1,3 +1,4 @@
+import { ruleCandidates } from "@/lib/recipe/ai";
 import { ModeSwitch } from "@/components/rf/ModeSwitch";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -184,6 +185,36 @@ function SettingsPage() {
             </span>
             <Switch checked={admin} onCheckedChange={setAdmin} />
           </label>
+        </Panel>
+        <Panel className="space-y-4">
+          <h2 className="font-bold">AI adatellenőrzés</h2>
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-muted-foreground">
+              Külső AI szolgáltatás (Lovable AI). Csak rövid szövegrészletek kerülnek elküldésre,
+              teljes fájlok és receptúra soha. Internet szükséges. Nélküle minden más működik.
+            </span>
+            <Switch
+              checked={store.rawSettings.aiEnabled === true}
+              disabled={!admin}
+              onCheckedChange={(on) => {
+                if (on && !window.confirm("Engedélyezed a külső AI szolgáltatás használatát?"))
+                  return;
+                store.setSettings({ ...store.rawSettings, aiEnabled: on });
+              }}
+            />
+          </label>
+          {ruleCandidates(store.rawSettings.aiMappings ?? []).length > 0 && (
+            <div className="text-sm">
+              <p className="font-medium">Szabályjelöltek (jóváhagyásra várnak)</p>
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                {ruleCandidates(store.rawSettings.aiMappings ?? []).map((m) => (
+                  <li key={m.pattern + m.fieldKey}>
+                    „{m.pattern}” → {m.fieldKey} ({m.products.length} termék)
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Panel>
         <Panel className="space-y-4">
           <h2 className="font-bold">Alapértelmezett szövegek</h2>

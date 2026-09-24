@@ -24,6 +24,10 @@ export interface Settings {
   userName: string;
   companyDefaults: { acceptanceRange: string; legalText: string };
   visibility: Record<string, Destination[]>;
+  /** External AI assistance approved by an admin (off by default) */
+  aiEnabled?: boolean;
+  /** Local AI mapping history (future deterministic rule candidates) */
+  aiMappings?: import("./ai").MappingStat[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -158,6 +162,27 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
 
   const manualOnly = (key: string, label: string, def: string) => {
     const ov = p.overrides[key];
+    const ai = p.aiValues?.[key];
+    if (!ov && !def && ai && (ai.status === "accepted" || ai.status === "review")) {
+      basics[key] = {
+        label,
+        original: ai.originalSourceText,
+        calculated: ai.value,
+        display: ai.value,
+        origin: "ai",
+        ai,
+        source: {
+          file: ai.sourceFile,
+          sheet: ai.sheet ?? "—",
+          cell: "—",
+          page: ai.page,
+          fileId: ai.fileId,
+          sourceType: "AI_EXTRACTED",
+        },
+        rule: `AI értelmezés – bizonyosság ${Math.round(ai.confidence * 100)}%`,
+      };
+      return;
+    }
     basics[key] = ov
       ? {
           label,
@@ -443,6 +468,16 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
         field: k,
       });
   }
+
+  const aiReview = Object.values(basics).filter(
+    (b) => b.origin === "ai" && b.ai?.status === "review",
+  ).length;
+  if (aiReview)
+    checks.push({
+      id: "ai-review",
+      level: "warn",
+      text: `AI által kitöltött, ellenőrizendő mezők: ${aiReview}`,
+    });
 
   // ---- multi-file package checks
   const files = p.files ?? [];

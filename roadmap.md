@@ -33,3 +33,5 @@
 - [ ] Open generated files in Microsoft Word (user) ; full manual E2E with real PDF/DOCX/DOC files (user)
 - [x] Offline start of the app (PWA)
 - [x] Demó mód / Éles teszt switch (isDemo records, hidden demo UI, no demo seeding in live, tests)
+- [x] AI adatellenőrzés fallback (admin-approved external AI, snippets only, confidence routing, traceability, mapping history + rule candidates) + Kimeneti dokumentumok teljessége
+- [ ] User: enable AI in Beállítások and test on real supplier files (after publish)
