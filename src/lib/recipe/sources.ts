@@ -25,7 +25,27 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
 
 export type FileStatus = "ok" | "review" | "unreadable";
 export type LinkState = "linked" | "suggested" | "rejected" | "none";
-export type RegStatus = "ok" | "review" | "invalid";
+export type RegStatus =
+  | "unverified"
+  | "verified_local"
+  | "verified_online"
+  | "not_found"
+  | "invalid";
+export const REG_LABELS: Record<RegStatus, string> = {
+  unverified: "Nem ellenőrzött",
+  verified_local: "Ellenőrzött",
+  verified_online: "Online ellenőrzött",
+  not_found: "Nem található",
+  invalid: "Hibás hivatkozás",
+};
+/** Maps statuses saved by earlier versions (ok/review) to the current ones. */
+export function regStatus(r: { status: string }): RegStatus {
+  if (r.status === "ok") return "verified_local";
+  if (r.status === "review") return "unverified";
+  return r.status as RegStatus;
+}
+export const regVerified = (r: { status: string }) => regStatus(r).startsWith("verified");
+export const regBad = (r: { status: string }) => ["not_found", "invalid"].includes(regStatus(r));
 
 export interface ExtractedField {
   key: string;
@@ -51,6 +71,10 @@ export interface RegRef {
   status: RegStatus;
   reviewedAt?: string;
   reviewedBy?: string;
+  /** manual | online | library */
+  verificationMethod?: "manual" | "online" | "library";
+  verificationSource?: string;
+  sourceUrl?: string;
 }
 
 export interface UnknownItem {
@@ -160,12 +184,12 @@ export const REGULATORY_LIBRARY: Record<
 > = {
   "1169/2011/EU": {
     title: "Fogyasztók élelmiszer-információval való ellátása",
-    status: "ok",
+    status: "verified_local",
     reviewedAt: "2026-01-15",
   },
   "1935/2004/EK": {
     title: "Élelmiszerrel érintkezésbe kerülő anyagok",
-    status: "ok",
+    status: "verified_local",
     reviewedAt: "2026-01-15",
   },
 };
@@ -517,8 +541,9 @@ export function extractFromBlocks(blocks: Block[]) {
         identifier: idf,
         page: b.page,
         original: b.text.slice(0, 240),
-        status: lib?.status ?? "review",
+        status: lib?.status ?? "unverified",
         reviewedAt: lib?.reviewedAt,
+        verificationMethod: lib ? "library" : undefined,
       });
     }
     const h = norm(b.text.replace(/[:()]/g, " "));
@@ -824,8 +849,9 @@ export function demoSpecFiles(): SourceFile[] {
         identifier: idf,
         page,
         original: `Megfelel a(z) ${idf} rendelet előírásainak.`,
-        status: lib?.status ?? "review",
+        status: lib?.status ?? "unverified",
         reviewedAt: lib?.reviewedAt,
+        verificationMethod: lib ? "library" : undefined,
       };
     }),
     unknown: unknown.map(([text, page]) => ({ id: uid(), text, page })),
@@ -1002,4 +1028,24 @@ export function demoSpecFiles(): SourceFile[] {
       ["! Régi Word formátum – ellenőrzés szükséges"],
     ),
   ];
+}
+
+/* ---------------- online regulation check (identifier only) ---------------- */
+export type OnlineRegResult =
+  | { kind: "offline" }
+  | { kind: "found"; celex: string; url: string; source: string }
+  | { kind: "not_found"; source: string }
+  | { kind: "invalid" };
+
+/** Sends ONLY the normalized identifier (e.g. "1169/2011/EU"); no product data ever leaves the device. */
+export async function verifyRegulationOnline(identifier: string): Promise<OnlineRegResult> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return { kind: "offline" };
+  try {
+    const r = await fetch(`/api/public/regulation?id=${encodeURIComponent(identifier)}`);
+    if (r.status === 400) return { kind: "invalid" };
+    if (!r.ok) return { kind: "offline" };
+    return (await r.json()) as OnlineRegResult;
+  } catch {
+    return { kind: "offline" };
+  }
 }
