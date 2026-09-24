@@ -179,8 +179,9 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                 <FileStatusBadge status={f.status} />
               </button>
               <OpenBtn id={f.id} />
-              {f.ext === "doc" && f.status !== "ok" && (
-                p.partialReviewAck?.[f.id] ? (
+              {f.ext === "doc" &&
+                f.status !== "ok" &&
+                (p.partialReviewAck?.[f.id] ? (
                   <span className="text-xs font-semibold text-success">✓ Kézzel ellenőrizve</span>
                 ) : (
                   <Button
@@ -206,8 +207,7 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                   >
                     Kézi ellenőrzés megtörtént
                   </Button>
-                )
-              )}
+                ))}
             </li>
           ))}
         </ul>

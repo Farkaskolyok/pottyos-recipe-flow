@@ -421,7 +421,7 @@ function ProductPage() {
           </ul>
         </Panel>
 
-        <TraceDrawer trace={trace} onClose={() => setTrace(null)} />
+        <TraceDrawer trace={trace} productId={p.id} onClose={() => setTrace(null)} />
       </div>
     </EditProvider>
   );
@@ -846,8 +846,10 @@ function DataStep({
 
 function TraceDrawer({
   trace,
+  productId,
   onClose,
 }: {
+  productId: string;
   trace: { key: string; v: TracedValue } | null;
   onClose: () => void;
 }) {
@@ -896,12 +898,14 @@ function TraceDrawer({
                 variant="outline"
                 className="mt-4 rounded-full"
                 onClick={() => {
-                  void openSource(v.source?.fileId ?? recipeFileId(p.id), v.source?.page).then((ok) => {
-                    if (!ok)
-                      toast.info(
-                        "Az eredeti fájl nincs eltárolva ezen az eszközön (demó adat vagy korábbi feltöltés).",
-                      );
-                  });
+                  void openSource(v.source?.fileId ?? recipeFileId(productId), v.source?.page).then(
+                    (ok) => {
+                      if (!ok)
+                        toast.info(
+                          "Az eredeti fájl nincs eltárolva ezen az eszközön (demó adat vagy korábbi feltöltés).",
+                        );
+                    },
+                  );
                 }}
               >
                 Forrás megnyitása
