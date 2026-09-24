@@ -80,7 +80,7 @@ function toNum(v: string | number | undefined | null): number | null {
   const n = Number(
     String(v)
       .replace(",", ".")
-      .replace(/[^0-9.\-]/g, ""),
+      .replace(/[^0-9.-]/g, ""),
   );
   return Number.isFinite(n) && String(v).trim() !== "" ? n : null;
 }

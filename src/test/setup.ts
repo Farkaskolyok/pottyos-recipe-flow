@@ -7,7 +7,7 @@ afterEach(() => cleanup());
 
 // jsdom gaps used by Radix / our UI
 if (!("ResizeObserver" in globalThis))
-  (globalThis as any).ResizeObserver = class {
+  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
     observe() {}
     unobserve() {}
     disconnect() {}

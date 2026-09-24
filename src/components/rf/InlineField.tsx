@@ -35,7 +35,7 @@ function parseNum(s: string): number | null {
     s
       .replace(/\s/g, "")
       .replace(",", ".")
-      .replace(/[^0-9.\-]/g, ""),
+      .replace(/[^0-9.-]/g, ""),
   );
   return s.trim() && Number.isFinite(n) ? n : null;
 }

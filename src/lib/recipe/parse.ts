@@ -61,7 +61,7 @@ function toNum(v: unknown): number | null {
     const t = v
       .replace(/\s/g, "")
       .replace(",", ".")
-      .replace(/[^0-9.\-]/g, "");
+      .replace(/[^0-9.-]/g, "");
     if (t === "" || t === "-" || t === ".") return null;
     const n = Number(t);
     return Number.isFinite(n) ? n : null;
