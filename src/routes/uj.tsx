@@ -150,10 +150,7 @@ function NewProduct() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader
-        title="Új termék"
-        subtitle="Töltsd fel a termékcsomagot. A rendszer rendszerezi, te csak az eltéréseket javítod."
-      />
+      <PageHeader title="Új termék" />
 
       <div className="space-y-4">
         <Section n={1} title="Receptúra" hint="XLS / XLSX">
@@ -310,11 +307,6 @@ function NewProduct() {
         </Section>
       </div>
 
-      <p className="mt-5 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <ShieldCheck className="size-4 text-success" /> Minden fájl a böngészőben kerül
-        feldolgozásra, nem töltődik fel sehova.
-      </p>
-
       <div className="mt-6 flex justify-end">
         <Button
           size="lg"
@@ -329,10 +321,6 @@ function NewProduct() {
       {demoMode && (
         <div className="mt-10 rounded-2xl border p-5">
           <h2 className="font-semibold">Demó termékcsomag</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Fiktív recept és 4 fiktív specifikáció – kapcsolással, ütköző értékkel, nem besorolt
-            adattal és jogszabályi figyelmeztetéssel.
-          </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="secondary" className="rounded-full" onClick={loadDemo}>
               Demó csomag betöltése

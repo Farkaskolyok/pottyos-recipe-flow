@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  useLayoutEffect,
+} from "react";
 import { Pencil, Check, X, Lock, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -61,15 +69,14 @@ export function InlineField({
 }) {
   const api = useContext(Ctx);
   const { admin } = useStore();
-  const [editing, setEditing] = useState(false);
   const v = api?.get(fieldKey);
   const def = fieldDef(fieldKey, label ?? v?.label);
   const wantFocus = !!api && api.focusKey === fieldKey && !!v && canEdit(def, admin);
+  // Open synchronously on first render when a fix navigation targets this field.
+  const [editing, setEditing] = useState(wantFocus);
+  if (wantFocus && !editing) setEditing(true);
   useEffect(() => {
-    if (wantFocus) {
-      setEditing(true);
-      api?.clearFocus?.();
-    }
+    if (wantFocus) api?.clearFocus?.();
   }, [wantFocus, api]);
   if (!api || !v) return <>{children ?? v?.display ?? emptyText}</>;
   const editable = canEdit(def, admin);
@@ -221,7 +228,13 @@ function Editor({
   const [showAdd, setShowAdd] = useState(false);
   const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const addRef = useRef(false);
-  useEffect(() => ref.current?.focus(), []);
+  // Focus + reveal before paint so the editable input deterministically owns keyboard focus.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView?.({ block: "center" });
+  }, []);
 
   const finalValue = (raw: string) => {
     if (!isNum) return raw.trim();

@@ -23,7 +23,7 @@ function Review() {
     .map((p) => ({ p, ds: buildDataset(p, dictionary, settings) }));
   return (
     <div>
-      <PageHeader title="Ellenőrzés" subtitle="Ezek a termékek várnak döntésre." />
+      <PageHeader title="Ellenőrzés" />
       {open.length === 0 ? (
         <p className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
           Nincs ellenőrzésre váró termék.
