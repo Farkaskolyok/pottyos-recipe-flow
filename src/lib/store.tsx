@@ -249,7 +249,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (!hasDemo) void syncLocalFiles(next.products);
           return next;
         }),
-      replaceState: (s) => setState(s),
+      replaceState: (s) => setState(mergeSaved(s, initial())),
       addCategory: (id, value) =>
         setState((s) => ({
           ...s,
