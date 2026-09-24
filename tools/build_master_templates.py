@@ -60,8 +60,9 @@ class Doc:
     for name,root in s.parts.items():
       j=' '.join(txt(p) for p in root.iter(W+'p'))
       for l in leaks:
-        for m in re.finditer(re.escape(l),j): print('  LEAK',os.path.basename(out),name,l,'::',j[max(0,m.start()-40):m.end()+40])
+        for m in re.finditer(re.escape(l),j): FOUND.append(l); print('  LEAK',os.path.basename(out),name,l,'::',j[max(0,m.start()-40):m.end()+40])
     print('saved',out)
+FOUND=[]
 CORE='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title></dc:title><dc:creator></dc:creator><cp:lastModifiedBy></cp:lastModifiedBy></cp:coreProperties>'
 LEAKS=['Pöttyös','PöTTYÖS','Túró Rudi','málna','Málna','38','106662','2106909855','Friesland','Mátészalk','Jármi','263','Popomájer','Kücsön','Mészárosné','1368','1398','2017','2018','5998200747953','06 80','pottyos.hu','27 nap','BOPP','44%']
 OUT='/dev-server/public/templates/'
@@ -135,3 +136,9 @@ d.lit('263','{{healthMarkNo}}',['document']); d.lit('4700 Mátészalka, Jármi �
 d.par(52,'Info vonal: {{infoLine}}'); d.par(53,'{{website}}'); d.par(56,'Vonalkód: {{barcode}}')
 d.lit('2018.07.12.','{{date}}',['footer'])
 d.save(OUT+'LEGAL_TEXT_MASTER.docx',LEAKS)
+
+# HARD FAILURE: a master template must never keep a historical product value.
+if FOUND:
+  print('FAILED: historical values remain in master templates:',sorted(set(FOUND)))
+  sys.exit(1)
+print('OK: no historical value leaked (also run: npm run test:run)')
