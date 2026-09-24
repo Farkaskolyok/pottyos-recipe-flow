@@ -497,6 +497,14 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
         text: `${open} ütköző érték (ELTÉRŐ ADATOK)`,
         action: "sources",
       });
+    const suspect = files.reduce((n, f) => n + f.fields.filter((x) => x.suspect).length, 0);
+    if (suspect)
+      checks.push({
+        id: "src-qsus",
+        level: "warn",
+        text: `${suspect} bizonytalan minőségi érték`,
+        action: "sources",
+      });
     if (unk)
       checks.push({
         id: "src-unk",
