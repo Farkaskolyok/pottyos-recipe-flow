@@ -27,8 +27,7 @@ export interface Backup {
 const toB64 = (buf: ArrayBuffer) => {
   const b = new Uint8Array(buf);
   let s = "";
-  for (let i = 0; i < b.length; i += 0x8000)
-    s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
   return btoa(s);
 };
 const fromB64 = (s: string) => {
@@ -73,7 +72,8 @@ export function parseBackup(text: string): Backup {
   const b = JSON.parse(text) as Backup;
   if (b?.format !== BACKUP_FORMAT || typeof b.version !== "number")
     throw new Error("Nem RecipeFlow biztonsági mentés.");
-  if (b.version > BACKUP_VERSION) throw new Error("Újabb verziójú mentés – frissítse az alkalmazást.");
+  if (b.version > BACKUP_VERSION)
+    throw new Error("Újabb verziójú mentés – frissítse az alkalmazást.");
   const st = b.state as { products?: unknown; dictionary?: unknown } | null;
   if (!st || !Array.isArray(st.products) || !Array.isArray(st.dictionary))
     throw new Error("A mentés hiányos (termékek / szótár).");
