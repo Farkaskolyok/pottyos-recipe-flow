@@ -43,7 +43,7 @@ export function StepCounter({
     if (total) {
       txt = String(total);
       tone = errorsTotal ? "text-destructive" : "text-warning";
-    } else txt = "✓";
+    } else txt = "";
   } else if (s === "Források" && !p.files?.length) {
     txt = "—";
   } else if (n) {
