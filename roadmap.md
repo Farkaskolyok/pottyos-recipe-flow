@@ -9,7 +9,9 @@
 - [x] Inline field-by-field editing (edit types, dropdowns, Módosítva, restore, company/regulatory rules)
 - [x] Multi-file product package (recipe + specs + references), local PDF/DOCX/XLS extraction, linking, conflicts, unknown data, quality params, regulatory review
 - [ ] Legacy .doc local conversion component (currently best-effort text scan)
-- [ ] Field output destinations wired into the three documents; master template preservation
+- [x] Three master templates (GYL, Késztermék spec, Szövegterv) from reference Word structure, template map, cross-document check
+- [ ] UI to create document-specific overrides (+ approval)
+- [ ] Pixel-exact reuse of the original .docx files as templates (currently rebuilt structure)
 - [ ] Historical field-mapping suggestions (admin accept/modify/reject)
 - [ ] Version comparison (changed values only)
 - [ ] Historical example library + Szabályjavaslat

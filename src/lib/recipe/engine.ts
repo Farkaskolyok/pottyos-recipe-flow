@@ -157,6 +157,20 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
   manualOnly("storageMode", "Tárolási mód", "Hűtve tárolandó");
   manualOnly("bestBeforeWording", "Minőségmegőrzési megfogalmazás", "Minőségét megőrzi:");
   manualOnly("legalText", "Jogszabályi szöveg", cd.legalText);
+  // master-template fields (values always come from the current product; empty until provided)
+  for (const [k, l, d] of [
+    ["sapCode", "Azonosítószám (SAP)", ""], ["taricCode", "TARIC kód", ""], ["variant", "Ízváltozat", ""],
+    ["legalName", "Jogszabályi megnevezés", ""], ["plantName", "Gyártó üzem", ""], ["plantAddress", "Gyártó üzem címe", ""],
+    ["healthMark", "Egészségügyi jel", ""], ["recommendedUse", "Ajánlott felhasználás", ""], ["consumerGroup", "Ajánlott fogyasztói csoport", ""],
+    ["processDescription", "Gyártási folyamat, paraméterek", ""], ["gmoStatement", "GMO nyilatkozat", ""],
+    ["packagingForm", "Csomagolás formája", ""], ["packagingMaterial", "Csomagolóanyag típusa", ""], ["secondaryPackaging", "Gyűjtő csomagolás", ""], ["palletPackaging", "Raklap csomagolás", ""],
+    ["weightTolerance", "Tömeg tűrés", ""], ["shelfLife", "Minőségmegőrzési időtartam", ""], ["transport", "Szállítási feltételek", ""], ["distributionConditions", "Forgalmazási feltételek", ""],
+    ["physical", "Fizikai jellemzők", ""], ["chemical", "Kémiai jellemzők", ""], ["micro", "Mikrobiológiai jellemzők", ""], ["sensory", "Érzékszervi jellemzők", ""], ["foodSafety", "Élelmiszerbiztonsági kritériumok", ""],
+    ["labelling", "Jelölés, gyártási azonosító", ""], ["claims", "Állítások", ""], ["mayContain", "Nyomokban tartalmazhat", ""], ["servingsPerPack", "Adagok száma a csomagban", ""],
+    ["infoLine", "Info vonal", ""], ["website", "Weboldal", ""], ["barcode", "Vonalkód", ""],
+    ["preparedBy", "Gyártmánylap elkészítéséért felelős", ""], ["responsible", "Szakmailag felelős személy", ""], ["approver", "Jóváhagyó", ""], ["effectiveDate", "Érvénybe lépés dátuma", ""],
+  ] as const)
+    manualOnly(k, l, d);
   basics.legalRef = { label: "Jogszabály azonosító", original: "1169/2011/EU", calculated: "1169/2011/EU", display: "1169/2011/EU", origin: "source" };
 
   const weightG = toNum(basics.productWeight.display) ?? null;
