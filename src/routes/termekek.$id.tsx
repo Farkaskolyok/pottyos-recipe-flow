@@ -1,3 +1,4 @@
+import { AiReview, Completeness } from "@/components/rf/AiReview";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, Pencil, RotateCcw, Check as CheckIcon } from "lucide-react";
@@ -324,19 +325,22 @@ function ProductPage() {
 
         {step === "Források" &&
           (p.files?.length ? (
-            <SourcesStep
-              p={p}
-              admin={store.admin}
-              user={store.settings.userName}
-              companyFixed={[
-                { label: "Elfogadhatósági tartomány", value: ds.basics.acceptanceRange.display },
-                { label: "Jogszabályi szöveg", value: ds.basics.legalText.display },
-                { label: "Gyártó", value: ds.basics.manufacturer.display },
-              ]}
-              onChange={(next, note) => touch(next, note)}
-              onTrace={(key, v) => setTrace({ key, v })}
-              onNext={() => goStep(1)}
-            />
+            <>
+              <AiReview p={p} ds={ds} onChange={(next, note) => touch(next, note)} />
+              <SourcesStep
+                p={p}
+                admin={store.admin}
+                user={store.settings.userName}
+                companyFixed={[
+                  { label: "Elfogadhatósági tartomány", value: ds.basics.acceptanceRange.display },
+                  { label: "Jogszabályi szöveg", value: ds.basics.legalText.display },
+                  { label: "Gyártó", value: ds.basics.manufacturer.display },
+                ]}
+                onChange={(next, note) => touch(next, note)}
+                onTrace={(key, v) => setTrace({ key, v })}
+                onNext={() => goStep(1)}
+              />
+            </>
           ) : (
             <Panel>
               <p className="text-sm text-muted-foreground">
@@ -379,7 +383,21 @@ function ProductPage() {
           />
         )}
         {step === "Dokumentumok" && (
-          <DocsStep docs={docs} onApprove={() => setStep("Jóváhagyás")} />
+          <>
+            <Completeness
+              ds={ds}
+              onOpen={(key) =>
+                goFix({
+                  id: `fill-${key}`,
+                  level: "warn",
+                  text: key,
+                  action: "set-value",
+                  field: key,
+                })
+              }
+            />
+            <DocsStep docs={docs} onApprove={() => setStep("Jóváhagyás")} />
+          </>
         )}
         {step === "Jóváhagyás" && (
           <ApproveStep

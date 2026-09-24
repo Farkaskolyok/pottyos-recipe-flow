@@ -469,7 +469,9 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
       });
   }
 
-  const aiReview = Object.values(basics).filter((b) => b.origin === "ai" && b.ai?.status === "review").length;
+  const aiReview = Object.values(basics).filter(
+    (b) => b.origin === "ai" && b.ai?.status === "review",
+  ).length;
   if (aiReview)
     checks.push({
       id: "ai-review",
