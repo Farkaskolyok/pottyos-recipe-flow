@@ -166,6 +166,7 @@ function Editor({
   const [adding, setAdding] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+  const addRef = useRef(false);
   useEffect(() => ref.current?.focus(), []);
 
   const finalValue = (raw: string) => {
@@ -230,12 +231,15 @@ function Editor({
             defaultOpen
             value={opts.includes(v.display) ? v.display : undefined}
             onValueChange={(x) => {
-              if (x === "__add") return setShowAdd(true);
+              if (x === "__add") {
+                addRef.current = true;
+                return setShowAdd(true);
+              }
               if (x !== v.display) onSave(x, "", "product");
               else onCancel();
             }}
             onOpenChange={(o) => {
-              if (!o && !showAdd) setTimeout(() => setShowAdd((s) => { if (!s) onCancel(); return s; }), 0);
+              if (!o) setTimeout(() => !addRef.current && onCancel(), 0);
             }}
           >
             <SelectTrigger className="h-9 min-w-52">
