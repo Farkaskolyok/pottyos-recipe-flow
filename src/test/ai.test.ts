@@ -18,7 +18,13 @@ import { fixTarget } from "@/lib/recipe/fixes";
 const pkg = () => demoPackageProduct(DEMO_DICTIONARY, "T");
 const snip = (p: ReturnType<typeof pkg>) => {
   const s = collectSnippets(p);
-  s.push({ id: "x1", text: "állomány: szájban olvad, sima állagú", fileId: "f", fileName: "a.pdf", page: 2 });
+  s.push({
+    id: "x1",
+    text: "állomány: szájban olvad, sima állagú",
+    fileId: "f",
+    fileName: "a.pdf",
+    page: 2,
+  });
   s.push({ id: "x2", text: "TARIC: 1904 1010", fileId: "f", fileName: "a.pdf" });
   return s;
 };
@@ -32,7 +38,9 @@ describe("AI fallback layer", () => {
   });
 
   it("rejects values not supported by the source text", () => {
-    expect(supportedBySource("szájban olvad, sima állagú", "állomány: szájban olvad, sima állagú")).toBe(true);
+    expect(
+      supportedBySource("szájban olvad, sima állagú", "állomány: szájban olvad, sima állagú"),
+    ).toBe(true);
     expect(supportedBySource("ropogós", "állomány: szájban olvad")).toBe(false);
     const p = pkg();
     const s = snip(p);
@@ -52,7 +60,12 @@ describe("AI fallback layer", () => {
     const { product, notFound } = storeAiResults(
       p,
       [
-        { fieldKey: "sensory", value: "szájban olvad, sima állagú", snippetId: "x1", confidence: 0.95 },
+        {
+          fieldKey: "sensory",
+          value: "szájban olvad, sima állagú",
+          snippetId: "x1",
+          confidence: 0.95,
+        },
         { fieldKey: "taricCode", value: "1904 1010", snippetId: "x2", confidence: 0.95 },
         { fieldKey: "barcode", value: "NOT_FOUND", snippetId: null, confidence: 0 },
       ],
@@ -62,9 +75,15 @@ describe("AI fallback layer", () => {
     );
     expect(notFound).toEqual(["barcode"]);
     const v = product.aiValues!.sensory;
-    expect(v).toMatchObject({ sourceFile: "a.pdf", page: 2, originalSourceText: s[s.length - 2].text });
+    expect(v).toMatchObject({
+      sourceFile: "a.pdf",
+      page: 2,
+      originalSourceText: s[s.length - 2].text,
+    });
     // nothing filled before applying
-    expect(buildDataset(product, DEMO_DICTIONARY, DEFAULT_SETTINGS).basics.sensory.display).toBe("");
+    expect(buildDataset(product, DEMO_DICTIONARY, DEFAULT_SETTINGS).basics.sensory.display).toBe(
+      "",
+    );
     const applied = applyConfident(product, "T");
     const ds = buildDataset(applied, DEMO_DICTIONARY, DEFAULT_SETTINGS);
     expect(ds.basics.sensory.origin).toBe("ai");
@@ -73,7 +92,9 @@ describe("AI fallback layer", () => {
     expect(chk.level).toBe("warn");
     expect(fixTarget(chk).step).toBe("Források");
     applied.overrides.sensory = { value: "Kézi", previous: "", by: "T", at: "" };
-    expect(buildDataset(applied, DEMO_DICTIONARY, DEFAULT_SETTINGS).basics.sensory.display).toBe("Kézi");
+    expect(buildDataset(applied, DEMO_DICTIONARY, DEFAULT_SETTINGS).basics.sensory.display).toBe(
+      "Kézi",
+    );
     const rej = decideAi(applied, "taricCode", false, "T");
     expect(buildDataset(rej, DEMO_DICTIONARY, DEFAULT_SETTINGS).basics.taricCode.display).toBe("");
   });
