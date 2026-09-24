@@ -34,7 +34,7 @@ import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineF
 import { cn } from "@/lib/utils";
 import { SourcesStep } from "@/components/rf/SourcesStep";
 import { openSource } from "@/lib/recipe/sources";
-import { blockingFor, fixTarget, STEPS, stepCounters, type Step } from "@/lib/recipe/fixes";
+import { blockingFor, fixTarget, openIssues, STEPS, stepCounters, type Step } from "@/lib/recipe/fixes";
 import { IssueRow, StepCounter, StepFooter, ValidationStep } from "@/components/rf/Workflow";
 import type { Check } from "@/lib/recipe/types";
 
@@ -298,6 +298,8 @@ function ProductPage() {
                   p={p}
                   diffs={diffs.length}
                   active={step === s}
+                total={openIssues(checks).length}
+                errorsTotal={checks.filter((c) => c.level === "error").length}
                 />
               </button>
             </li>

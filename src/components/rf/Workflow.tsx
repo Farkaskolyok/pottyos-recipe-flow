@@ -14,7 +14,11 @@ export function StepCounter({
   p,
   diffs,
   active,
+  total = 0,
+  errorsTotal = 0,
 }: {
+  total?: number;
+  errorsTotal?: number;
   s: Step;
   c: { errors: number; warns: number };
   done: boolean;
@@ -35,14 +39,18 @@ export function StepCounter({
       txt = String(diffs);
       tone = "text-warning";
     }
+  } else if (s === "Ellenőrzés") {
+    if (total) {
+      txt = String(total);
+      tone = errorsTotal ? "text-destructive" : "text-warning";
+    } else txt = "✓";
   } else if (s === "Források" && !p.files?.length) {
     txt = "—";
   } else if (n) {
     txt = s === "Források" ? "!" : String(n);
     tone = c.errors ? "text-destructive" : "text-warning";
   } else if (done) {
-    txt = "✓";
-    tone = "text-success";
+    txt = "";
   }
   return (
     <span
