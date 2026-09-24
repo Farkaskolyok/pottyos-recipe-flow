@@ -218,7 +218,10 @@ export function newProduct(raw: Product["raw"], dict: DictionaryEntry[], user: s
 export function seedProducts(dict: DictionaryEntry[], user: string): Product[] {
   const mk = (d: DemoRecipe) => {
     const wb = buildDemoWorkbook(d);
-    return { ...newProduct(parseWorkbook(wb, `Demo_${d.key}_recipe.xlsx`, 18_000), dict, user), isDemo: true };
+    return {
+      ...newProduct(parseWorkbook(wb, `Demo_${d.key}_recipe.xlsx`, 18_000), dict, user),
+      isDemo: true,
+    };
   };
   const cocoa = mk(DEMO_RECIPES[1]);
   const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();

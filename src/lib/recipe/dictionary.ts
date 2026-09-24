@@ -152,4 +152,7 @@ export function matchIngredient(
   return { status: "unknown", entryId: null };
 }
 
-export const DEMO_DICTIONARY: DictionaryEntry[] = RAW_DEMO_DICTIONARY.map((e) => ({ ...e, isDemo: true }));
+export const DEMO_DICTIONARY: DictionaryEntry[] = RAW_DEMO_DICTIONARY.map((e) => ({
+  ...e,
+  isDemo: true,
+}));
