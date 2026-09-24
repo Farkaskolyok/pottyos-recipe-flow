@@ -18,6 +18,7 @@ import type { Product, ResolvedIngredient, TracedValue, DictionaryEntry } from "
 import { huDate, huNumber, uid } from "@/lib/recipe/format";
 import { LevelIcon, MatchPill, OriginTag, Panel, StatusPill } from "@/components/rf/ui";
 import { DocPreview } from "@/components/rf/DocPreview";
+import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineField";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/termekek/$id")({
@@ -46,7 +47,7 @@ function ProductPage() {
   const store = useStore();
   const p = store.getProduct(id);
   const [step, setStep] = useState<Step>("Alapanyagok");
-  const [trace, setTrace] = useState<{ key: string; v: TracedValue; editable: boolean } | null>(null);
+  const [trace, setTrace] = useState<{ key: string; v: TracedValue } | null>(null);
 
   const ds = useMemo(() => (p ? buildDataset(p, store.dictionary, store.settings) : null), [p, store.dictionary, store.settings]);
   const docs = useMemo(() => (p && ds ? buildDocs(p, ds, store.dictionary, store.settings) : null), [p, ds, store.dictionary, store.settings]);
@@ -73,14 +74,59 @@ function ProductPage() {
     Jóváhagyás: p.status === "approved",
   };
 
-  const setOverride = (key: string, value: string, note: string, previous: string) => {
-    const next = { ...p, overrides: { ...p.overrides, [key]: { value, note, previous, by: store.settings.userName, at: new Date().toISOString() } } };
+  const touch = (next: Product, note: string) => {
     if (next.status === "approved") next.status = "review";
-    save(bump(next, `Manuális módosítás: ${key}`));
-    toast.success("Érték mentve");
+    save(bump(next, note));
+  };
+  const getValue = (key: string): TracedValue | undefined => {
+    if (key === "ingredientText")
+      return {
+        label: "Összetevők",
+        original: null,
+        calculated: autoIngredientText(p, store.dictionary, store.settings),
+        display: ds.ingredientText,
+        origin: p.ingredientTextOverride ? "manual" : "calculated",
+        rule: "Összetevő sorrend v1",
+        manual: p.ingredientTextOverride && p.ingredientTextMeta ? { ...p.ingredientTextMeta } : undefined,
+      };
+    if (key.startsWith("n100.")) return ds.nutrition.find((n) => `n100.${n.key}` === key)?.per100;
+    return ds.basics[key];
+  };
+  const api: EditApi = {
+    get: getValue,
+    set: (key, value, note, scope) => {
+      const cur = getValue(key);
+      const label = cur?.label ?? key;
+      if (scope === "default" && key === "acceptanceRange") {
+        store.setSettings({ ...store.settings, companyDefaults: { ...store.settings.companyDefaults, acceptanceRange: value } });
+        const { [key]: _, ...rest } = p.overrides;
+        touch({ ...p, overrides: rest }, `Alapérték módosítva: ${label}`);
+        toast.success("Alapérték módosítva minden termékre");
+        return;
+      }
+      const meta = { by: store.settings.userName, at: new Date().toISOString(), note };
+      if (key === "ingredientText") {
+        const auto = autoIngredientText(p, store.dictionary, store.settings);
+        touch(
+          { ...p, ingredientTextOverride: value === auto ? undefined : value, ingredientTextMeta: { ...meta, previous: p.ingredientTextMeta?.previous ?? auto } },
+          "Összetevők szöveg módosítva",
+        );
+        return;
+      }
+      const previous = p.overrides[key]?.previous ?? cur?.display ?? "";
+      const ack = { ...(p.regulatoryAck ?? {}) };
+      delete ack[key];
+      touch({ ...p, regulatoryAck: ack, overrides: { ...p.overrides, [key]: { value, previous, ...meta } } }, `Manuális módosítás: ${label}`);
+    },
+    restore: (key) => {
+      if (key === "ingredientText") return touch({ ...p, ingredientTextOverride: undefined, ingredientTextMeta: undefined }, "Összetevők szöveg visszaállítva");
+      const { [key]: _, ...rest } = p.overrides;
+      touch({ ...p, overrides: rest }, `Eredeti érték visszaállítva: ${getValue(key)?.label ?? key}`);
+    },
   };
 
   return (
+    <EditProvider value={api}>
     <div>
       <Link to="/termekek" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Termékek
@@ -125,8 +171,7 @@ function ProductPage() {
         <DataStep
           p={p}
           ds={ds}
-          onTrace={(key, v, editable) => setTrace({ key, v, editable })}
-          onSave={save}
+          onTrace={(key, v) => setTrace({ key, v })}
           onNext={() => setStep("Ellenőrzés")}
         />
       )}
@@ -147,8 +192,23 @@ function ProductPage() {
                   </Button>
                 )}
                 {c.action === "set-value" && c.field && (
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setTrace({ key: c.field!, v: ds.basics[c.field!], editable: true })}>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep("Adatok")}>
                     Érték megadása
+                  </Button>
+                )}
+                {c.action === "regulatory" && c.field && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full"
+                    disabled={!store.admin}
+                    title={store.admin ? undefined : "Csak jogosult felhasználó"}
+                    onClick={() => {
+                      if (!window.confirm("Megerősíted, hogy a jogi/szakmai ellenőrzés megtörtént?")) return;
+                      touch({ ...p, regulatoryAck: { ...(p.regulatoryAck ?? {}), [c.field!]: { by: store.settings.userName, at: new Date().toISOString() } } }, "Jogszabályi ellenőrzés elvégezve");
+                    }}
+                  >
+                    Jogi ellenőrzés megtörtént
                   </Button>
                 )}
               </li>
@@ -187,16 +247,9 @@ function ProductPage() {
         </ul>
       </Panel>
 
-      <TraceDrawer
-        trace={trace}
-        onClose={() => setTrace(null)}
-        onSave={(value, note) => {
-          if (!trace) return;
-          setOverride(trace.key, value, note, trace.v.display);
-          setTrace(null);
-        }}
-      />
+      <TraceDrawer trace={trace} onClose={() => setTrace(null)} />
     </div>
+    </EditProvider>
   );
 }
 
@@ -418,126 +471,85 @@ function ResolveDialog({
 
 /* ---------------- Step 2: data ---------------- */
 
-function ValueRow({ v, onClick }: { v: TracedValue; onClick: () => void }) {
+function FieldRow({ k, v, onTrace }: { k: string; v: TracedValue; onTrace: (key: string, v: TracedValue) => void }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/60">
-      <span className="flex-1 text-sm text-muted-foreground">{v.label}</span>
-      <span className={cn("font-semibold", !v.display && "text-destructive")}>{v.display || "hiányzik"}</span>
-      <OriginTag origin={v.origin} />
-    </button>
+    <div className="flex items-start gap-3 px-4 py-2.5">
+      <button onClick={() => onTrace(k, v)} className="w-40 shrink-0 pt-0.5 text-left text-sm text-muted-foreground hover:text-foreground sm:w-48" title="Forrás és szabály megtekintése">
+        {v.label}
+      </button>
+      <div className="min-w-0 flex-1 font-semibold">
+        <InlineField fieldKey={k} block={(v.display?.length ?? 0) > 50} emptyText="hiányzik" />
+      </div>
+    </div>
   );
 }
 
 function DataStep({
-  p,
   ds,
   onTrace,
-  onSave,
   onNext,
 }: {
   p: Product;
   ds: ReturnType<typeof buildDataset>;
-  onTrace: (key: string, v: TracedValue, editable: boolean) => void;
-  onSave: (p: Product) => void;
+  onTrace: (key: string, v: TracedValue) => void;
   onNext: () => void;
 }) {
-  const { dictionary, settings } = useStore();
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState("");
   const b = ds.basics;
-  const basicKeys = ["productName", "marketingName", "description", "productWeight", "servingSize", "totalSolids", "losses"];
-  const packKeys = ["packaging", "storage", "manufacturer", "distributor"];
+  const groups: [string, string[]][] = [
+    ["Alapadatok", ["productName", "marketingName", "description", "recipeVersion", "productWeight", "servingSize", "texture", "totalSolids", "losses", "acceptanceRange"]],
+    ["Csomagolási adatok", ["packaging", "storageMode", "storage", "manufacturer", "distributor"]],
+    ["Allergének és jogszabályi adatok", ["allergenList", "bestBeforeWording", "legalRef", "legalText"]],
+  ];
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Panel className="p-0">
-        <h2 className="px-5 pb-2 pt-5 text-lg font-bold">Alapadatok</h2>
-        <div className="divide-y border-t">
-          {basicKeys.map((k) => (
-            <ValueRow key={k} v={b[k]} onClick={() => onTrace(k, b[k], k !== "totalSolids")} />
-          ))}
-        </div>
-        <h2 className="px-5 pb-2 pt-5 text-lg font-bold">Csomagolási adatok</h2>
-        <div className="divide-y border-t">
-          {packKeys.map((k) => (
-            <ValueRow key={k} v={b[k]} onClick={() => onTrace(k, b[k], true)} />
-          ))}
-        </div>
-      </Panel>
-
-      <Panel className="p-0">
-        <h2 className="px-5 pb-2 pt-5 text-lg font-bold">Tápérték</h2>
-        <div className="grid grid-cols-[1fr_auto_auto] items-center border-t text-sm">
-          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground">Megnevezés</div>
-          <div className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">100 g</div>
-          <div className="px-4 py-2 text-right text-xs font-semibold text-muted-foreground">{ds.weightG ? `${huNumber(ds.weightG, 0)} g` : "termék"}</div>
-          {ds.nutrition.map((n) => (
-            <div key={n.key} className="contents">
-              <div className={cn("border-t px-4 py-2.5", n.key === "saturates" || n.key === "sugars" ? "pl-8 text-muted-foreground" : "")}>{n.per100.label}</div>
-              <button className="border-t px-3 py-2.5 text-right font-semibold hover:bg-muted/60" onClick={() => onTrace(`n100.${n.key}`, n.per100, true)}>
-                {n.per100.display}
-                {n.per100.origin === "manual" && <span className="ml-1 text-primary">*</span>}
-              </button>
-              <button className="border-t px-4 py-2.5 text-right hover:bg-muted/60" disabled={!n.perServing} onClick={() => n.perServing && onTrace(`ns.${n.key}`, n.perServing, false)}>
-                {n.perServing?.display ?? "—"}
-              </button>
+      <div className="space-y-6">
+        {groups.map(([title, keys]) => (
+          <Panel key={title} className="p-0">
+            <h2 className="px-5 pb-2 pt-5 text-lg font-bold">{title}</h2>
+            <div className="divide-y border-t">
+              {keys.map((k) => b[k] && <FieldRow key={k} k={k} v={b[k]} onTrace={onTrace} />)}
             </div>
-          ))}
-        </div>
-        <p className="border-t px-5 py-3 text-xs text-muted-foreground">Kattints egy értékre a forrás és az alkalmazott szabály megtekintéséhez.</p>
-      </Panel>
+          </Panel>
+        ))}
+      </div>
 
-      <Panel className="lg:col-span-2">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold">Összetevők szöveg</h2>
-          <div className="flex items-center gap-2">
-            {ds.ingredientTextManual && <span className="rounded-md bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">MANUÁLISAN MÓDOSÍTVA</span>}
-            {!editing && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-full"
-                onClick={() => {
-                  setText(ds.ingredientText);
-                  setEditing(true);
-                }}
-              >
-                <Pencil className="size-3.5" /> Szerkesztés
-              </Button>
-            )}
-            {ds.ingredientTextManual && !editing && (
-              <Button size="sm" variant="ghost" className="rounded-full" onClick={() => onSave(bump({ ...p, ingredientTextOverride: undefined }, "Összetevők szöveg visszaállítva"))}>
-                <RotateCcw className="size-3.5" /> Automatikus szöveg
-              </Button>
-            )}
+      <div className="space-y-6">
+        <Panel className="p-0">
+          <h2 className="px-5 pb-2 pt-5 text-lg font-bold">Tápérték</h2>
+          <div className="grid grid-cols-[1fr_auto_auto] items-center border-t text-sm">
+            <div className="px-4 py-2 text-xs font-semibold text-muted-foreground">Megnevezés</div>
+            <div className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">100 g</div>
+            <div className="px-4 py-2 text-right text-xs font-semibold text-muted-foreground">{ds.weightG ? `${huNumber(ds.weightG, 0)} g` : "termék"}</div>
+            {ds.nutrition.map((n) => (
+              <div key={n.key} className="contents">
+                <button
+                  onClick={() => onTrace(`n100.${n.key}`, n.per100)}
+                  className={cn("border-t px-4 py-2.5 text-left hover:text-foreground", n.key === "saturates" || n.key === "sugars" ? "pl-8 text-muted-foreground" : "")}
+                >
+                  {n.per100.label}
+                </button>
+                <div className="border-t px-3 py-2.5 text-right font-semibold">
+                  <InlineField fieldKey={`n100.${n.key}`} />
+                </div>
+                <button className="border-t px-4 py-2.5 text-right hover:bg-muted/60" disabled={!n.perServing} onClick={() => n.perServing && onTrace(`ns.${n.key}`, n.perServing)}>
+                  {n.perServing?.display ?? "—"}
+                </button>
+              </div>
+            ))}
           </div>
-        </div>
-        {editing ? (
-          <div className="space-y-2">
-            <Textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" className="rounded-full" onClick={() => setEditing(false)}>
-                Mégse
-              </Button>
-              <Button
-                className="rounded-full"
-                onClick={() => {
-                  const auto = autoIngredientText(p, dictionary, settings);
-                  onSave(bump({ ...p, ingredientTextOverride: text.trim() === auto ? undefined : text.trim() }, "Összetevők szöveg módosítva"));
-                  setEditing(false);
-                }}
-              >
-                Mentés
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <p className="leading-relaxed">
-            {ds.ingredientSegments.map((s, i) => (s.emph ? <b key={i}>{s.text}</b> : <span key={i}>{s.text}</span>))}
-          </p>
-        )}
-        <p className="mt-3 text-sm text-muted-foreground">Allergének: {ds.allergens.length ? ds.allergens.join(", ") : "nincs"}</p>
-      </Panel>
+          <p className="border-t px-5 py-3 text-xs text-muted-foreground">A megnevezésre kattintva látod a forrást és az alkalmazott szabályt.</p>
+        </Panel>
+
+        <Panel>
+          <h2 className="mb-3 text-lg font-bold">Összetevők</h2>
+          <InlineField fieldKey="ingredientText" block>
+            <p className="leading-relaxed">
+              {ds.ingredientSegments.map((s, i) => (s.emph ? <b key={i}>{s.text}</b> : <span key={i}>{s.text}</span>))}
+            </p>
+          </InlineField>
+        </Panel>
+      </div>
 
       <div className="flex justify-end lg:col-span-2">
         <Button className="rounded-full px-6" onClick={onNext}>
@@ -548,17 +560,7 @@ function DataStep({
   );
 }
 
-function TraceDrawer({
-  trace,
-  onClose,
-  onSave,
-}: {
-  trace: { key: string; v: TracedValue; editable: boolean } | null;
-  onClose: () => void;
-  onSave: (value: string, note: string) => void;
-}) {
-  const [val, setVal] = useState("");
-  const [note, setNote] = useState("");
+function TraceDrawer({ trace, onClose }: { trace: { key: string; v: TracedValue } | null; onClose: () => void }) {
   const v = trace?.v;
   const rows: [string, string][] = v
     ? [
@@ -572,12 +574,7 @@ function TraceDrawer({
       ]
     : [];
   return (
-    <Sheet
-      open={!!trace}
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-    >
+    <Sheet open={!!trace} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         {v && (
           <>
@@ -596,32 +593,13 @@ function TraceDrawer({
               ))}
             </dl>
             {v.manual && (
-              <div className="mt-4 rounded-xl bg-accent p-3 text-sm">
-                <p className="font-semibold text-accent-foreground">Manuálisan módosított</p>
+              <div className="mt-4 rounded-xl bg-muted p-3 text-sm">
+                <p className="font-semibold">Manuálisan módosított</p>
                 <p>Előző érték: {v.manual.previous || "—"}</p>
                 <p>
-                  {v.manual.by} · {huDate(v.manual.at)} {new Date(v.manual.at).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}
+                  {v.manual.by} · {huDate(v.manual.at)}
                 </p>
                 {v.manual.note && <p>Megjegyzés: {v.manual.note}</p>}
-              </div>
-            )}
-            {trace.editable && (
-              <div className="mt-6 space-y-3 border-t pt-5">
-                <p className="font-semibold">Érték megadása</p>
-                <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder={v.display || "Új érték"} />
-                <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Indoklás (opcionális)" />
-                <Button
-                  className="w-full rounded-full"
-                  disabled={!val.trim()}
-                  onClick={() => {
-                    onSave(val.trim(), note.trim());
-                    setVal("");
-                    setNote("");
-                  }}
-                >
-                  Mentés
-                </Button>
-                <p className="text-xs text-muted-foreground">Az eredeti érték megmarad, a módosítás naplózásra kerül.</p>
               </div>
             )}
           </>
