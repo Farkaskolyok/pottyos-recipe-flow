@@ -50,7 +50,7 @@ export const aiAnalyze = createServerFn({ method: "POST" })
         model: lovable.responses("openai/gpt-6-astra"),
         system: SYSTEM,
         prompt,
-        output: Output.object({ schema: Out }),
+        experimental_output: Output.object({ schema: Out }),
         providerOptions: {
           openai: {
             forceReasoning: true,
@@ -61,7 +61,7 @@ export const aiAnalyze = createServerFn({ method: "POST" })
           },
         },
       });
-      const out = await result.output;
+      const out = await result.experimental_output;
       return { ok: true, results: out.results, noise: out.noise };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

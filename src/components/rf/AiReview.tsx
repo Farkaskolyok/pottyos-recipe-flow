@@ -116,7 +116,11 @@ export function AiReview({
                 </Button>
               )}
               {open.length > 0 && (
-                <Button variant="ghost" className="rounded-full" onClick={() => setShowList((x) => !x)}>
+                <Button
+                  variant="ghost"
+                  className="rounded-full"
+                  onClick={() => setShowList((x) => !x)}
+                >
                   JAVASLATOK ÁTNÉZÉSE ({open.length})
                 </Button>
               )}
@@ -209,14 +213,22 @@ export function Completeness({ ds, onOpen }: { ds: Dataset; onOpen: (key: string
                 {i.docs.map((d) => DOC_SHORT[d]).join(", ")}
               </span>
               {i.state !== "filled" && (
-                <Button size="sm" variant="outline" className="rounded-full" onClick={() => onOpen(i.key)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => onOpen(i.key)}
+                >
                   {i.state === "missing" ? "KITÖLTÉS" : "ELLENŐRZÉS"}
                 </Button>
               )}
             </li>
           ))}
         </ul>
-        <button className="mt-2 text-xs text-muted-foreground underline" onClick={() => setAll((x) => !x)}>
+        <button
+          className="mt-2 text-xs text-muted-foreground underline"
+          onClick={() => setAll((x) => !x)}
+        >
           {all ? "Csak a hiányzók" : "Összes mező"}
         </button>
       </Panel>
