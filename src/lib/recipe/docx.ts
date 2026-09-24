@@ -16,6 +16,7 @@ import {
   PageNumber,
 } from "docx";
 import type { Block, DocModel } from "./documents";
+import { fillMaster } from "./docxTemplate";
 
 const RED = "D6001C";
 const FONT = "Arial";
@@ -161,7 +162,13 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Authoritative output: approved master Word template filled with the current dataset. */
 export async function exportDocx(d: DocModel) {
+  download(await fillMaster(d.kind, d.fields, d.rich), d.fileName);
+}
+
+/** Legacy generic rebuild, kept only as an internal fallback (not used by the export buttons). */
+export async function exportGenericDocx(d: DocModel) {
   download(await Packer.toBlob(docModelToDocument(d)), d.fileName);
 }
 

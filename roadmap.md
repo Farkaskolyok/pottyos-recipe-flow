@@ -8,10 +8,10 @@
 - [x] Fix "home page not showing" (was a temporary reload while tools installed)
 - [x] Inline field-by-field editing (edit types, dropdowns, Módosítva, restore, company/regulatory rules)
 - [x] Multi-file product package (recipe + specs + references), local PDF/DOCX/XLS extraction, linking, conflicts, unknown data, quality params, regulatory review
-- [ ] Legacy .doc local conversion component (currently best-effort text scan)
+- [x] Legacy .doc: local converter hook (127.0.0.1) + offline converter service; fallback marked "! Régi Word formátum – ellenőrzés szükséges"
 - [x] Three master templates (GYL, Késztermék spec, Szövegterv) from reference Word structure, template map, cross-document check
 - [ ] UI to create document-specific overrides (+ approval)
-- [ ] Pixel-exact reuse of the original .docx files as templates (currently rebuilt structure)
+- [x] Template-based Word export: GYL_MASTER, SPEC_MASTER, LEGAL_TEXT_MASTER built from the original files, filled with current data
 - [ ] Historical field-mapping suggestions (admin accept/modify/reject)
 - [ ] Version comparison (changed values only)
 - [ ] Historical example library + Szabályjavaslat
