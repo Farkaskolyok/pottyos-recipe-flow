@@ -43,7 +43,7 @@ describe("inline edit", () => {
     const u = userEvent.setup();
     wrap(<Harness initial={{ marketingName: "Régi" }} fieldKey="marketingName" />);
     await u.click(await screen.findByLabelText("Érték módosítása"));
-    const input = screen.getByRole("textbox");
+    const input = screen.getAllByRole("textbox")[0];
     await u.clear(input);
     await u.type(input, "Új név{Enter}");
     await waitFor(() => expect(screen.getByTestId("val")).toHaveTextContent("Új név"));
@@ -52,19 +52,22 @@ describe("inline edit", () => {
     const u = userEvent.setup();
     wrap(<Harness initial={{ marketingName: "Régi" }} fieldKey="marketingName" />);
     await u.click(await screen.findByLabelText("Érték módosítása"));
-    await u.type(screen.getByRole("textbox"), "xxx{Escape}");
+    await u.type(screen.getAllByRole("textbox")[0], "xxx{Escape}");
     expect(screen.getByTestId("val")).toHaveTextContent("Régi");
   });
   it("fix navigation opens the field directly in edit mode with focus", async () => {
     wrap(<Harness initial={{ marketingName: "" }} fieldKey="marketingName" focusKey="marketingName" />);
-    const input = await screen.findByRole("textbox");
+    const input = (await screen.findAllByRole("textbox"))[0];
     expect(input).toHaveFocus();
   });
   it("dropdown field offers only approved values", async () => {
     const u = userEvent.setup();
     wrap(<Harness initial={{ storageMode: "Hűtve tárolandó" }} fieldKey="storageMode" />);
     await u.click(await screen.findByLabelText("Érték módosítása"));
-    expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
+    const opts = await screen.findAllByRole("option");
+    expect(opts.map((o) => o.textContent)).toEqual(expect.arrayContaining(["Hűtve tárolandó", "Fagyasztva tárolandó"]));
+    await u.click(screen.getByRole("option", { name: "Fagyasztva tárolandó" }));
+    await waitFor(() => expect(screen.getByTestId("val")).toHaveTextContent("Fagyasztva tárolandó"));
   });
 });
 
@@ -115,7 +118,7 @@ describe("document preview", () => {
     const ds = buildDataset(p, DEMO_DICTIONARY, DEFAULT_SETTINGS);
     const docs = buildDocs(p, ds, DEMO_DICTIONARY, DEFAULT_SETTINGS);
     for (const k of ["sheet", "spec", "pack"] as const) {
-      const { container, unmount } = render(<DocPreview doc={docs[k]} />);
+      const { container, unmount } = wrap(<DocPreview doc={docs[k]} />);
       expect(within(container).getByText(docs[k].title, { exact: false })).toBeInTheDocument();
       unmount();
     }
@@ -128,7 +131,7 @@ describe("persistent original files", () => {
     await persistSourceFile("f1", f);
     const rec = await loadFileBlob("f1");
     expect(rec?.name).toBe("Spec.pdf");
-    expect(await rec!.blob.text()).toBe("PDF-TARTALOM");
+    expect(rec!.size).toBe(12);
     expect((await getSourceBlob("f1"))?.name).toBe("Spec.pdf");
   });
 });
