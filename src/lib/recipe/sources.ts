@@ -326,10 +326,19 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     if (ext === "pdf") blocks = await pdfBlocks(buf);
     else if (ext === "docx") blocks = await docxBlocks(buf);
     else if (ext === "xls" || ext === "xlsx") blocks = sheetBlocks(buf);
-    else if (ext === "doc") {
-      blocks = legacyDocBlocks(buf);
-      sf.warnings.push("Régi Word (.doc) formátum: a szöveg csak részlegesen olvasható. Javasolt helyi konverzió DOCX-re.");
-    } else throw new Error("unsupported");
+    let legacyPartial = false;
+    if (ext === "doc") {
+      const converted = await convertLegacyDocLocally(buf);
+      if (converted) {
+        blocks = await docxBlocks(converted);
+        sf.warnings.push("Régi Word (.doc) formátum – helyi konverterrel DOCX-re alakítva.");
+      } else {
+        blocks = legacyDocBlocks(buf);
+        legacyPartial = true;
+        sf.warnings.push(LEGACY_DOC_WARNING);
+        sf.warnings.push("Helyi konverter nem érhető el: a szöveg csak részlegesen olvasható, a kinyert adatok nem tekinthetők ellenőrzöttnek.");
+      }
+    } else if (!(ext === "pdf" || ext === "docx" || ext === "xls" || ext === "xlsx")) throw new Error("unsupported");
     if (!blocks.length) {
       sf.status = "unreadable";
       sf.warnings.push(ext === "pdf" ? "Nem található szöveg (valószínűleg szkennelt PDF)." : "Nem található olvasható szöveg.");
@@ -339,6 +348,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     Object.assign(sf, x);
     sf.detectedMaterial = x.fields.find((f) => f.key === "product_description")?.value;
     if (ext === "doc") sf.status = "review";
+    if (legacyPartial) sf.fields = sf.fields.map((f) => ({ ...f, confidence: "low" as never }));
     if (x.fields.length < 2) {
       sf.status = "review";
       sf.warnings.push("Kevés adat azonosítható automatikusan.");
