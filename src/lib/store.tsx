@@ -4,6 +4,9 @@ import { DEMO_DICTIONARY } from "./recipe/dictionary";
 import { DEFAULT_SETTINGS, type Settings } from "./recipe/engine";
 import { DEFAULT_RULES, type RuleDef } from "./recipe/rules";
 import { seedProducts } from "./recipe/demo";
+import { DEFAULT_CATEGORIES } from "./recipe/fields";
+
+type Categories = Record<string, { label: string; options: string[] }>;
 
 // Local-only persistence (browser storage). No data leaves the device.
 const KEY = "recipeflow.v1";
@@ -14,6 +17,7 @@ interface State {
   settings: Settings;
   rules: RuleDef[];
   admin: boolean;
+  categories: Categories;
 }
 
 interface Store extends State {
@@ -26,6 +30,7 @@ interface Store extends State {
   setRules: (r: RuleDef[]) => void;
   setAdmin: (a: boolean) => void;
   resetDemo: () => void;
+  addCategory: (id: string, value: string) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -37,17 +42,20 @@ function initial(): State {
     settings: DEFAULT_SETTINGS,
     rules: DEFAULT_RULES,
     admin: true,
+    categories: DEFAULT_CATEGORIES,
   };
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>({ products: [], dictionary: DEMO_DICTIONARY, settings: DEFAULT_SETTINGS, rules: DEFAULT_RULES, admin: true });
+  const [state, setState] = useState<State>({ products: [], dictionary: DEMO_DICTIONARY, settings: DEFAULT_SETTINGS, rules: DEFAULT_RULES, admin: true, categories: DEFAULT_CATEGORIES });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      setState(raw ? { ...initial(), ...JSON.parse(raw) } : initial());
+      const base = initial();
+      const saved = raw ? JSON.parse(raw) : null;
+      setState(saved ? { ...base, ...saved, settings: { ...base.settings, ...saved.settings }, categories: { ...base.categories, ...saved.categories } } : base);
     } catch {
       setState(initial());
     }
@@ -82,6 +90,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRules: (rules) => setState((s) => ({ ...s, rules })),
       setAdmin: (admin) => setState((s) => ({ ...s, admin })),
       resetDemo: () => setState(initial()),
+      addCategory: (id, value) =>
+        setState((s) => ({
+          ...s,
+          categories: { ...s.categories, [id]: { ...s.categories[id], options: [...new Set([...(s.categories[id]?.options ?? []), value])] } },
+        })),
     }),
     [state, ready, upsertProduct],
   );

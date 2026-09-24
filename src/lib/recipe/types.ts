@@ -101,7 +101,7 @@ export interface Check {
   id: string;
   level: CheckLevel;
   text: string;
-  action?: "resolve-ingredients" | "set-value";
+  action?: "resolve-ingredients" | "set-value" | "regulatory";
   field?: string;
 }
 
@@ -127,5 +127,7 @@ export interface Product {
   /** manual overrides keyed by field id */
   overrides: Record<string, { value: string; by: string; at: string; note?: string; previous: string }>;
   ingredientTextOverride?: string;
+  ingredientTextMeta?: { by: string; at: string; previous: string };
+  regulatoryAck?: Record<string, { by: string; at: string }>;
   history: VersionEntry[];
 }
