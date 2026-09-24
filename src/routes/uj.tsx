@@ -327,21 +327,21 @@ function NewProduct() {
       </div>
 
       {demoMode && (
-      <div className="mt-10 rounded-2xl border p-5">
-        <h2 className="font-semibold">Demó termékcsomag</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Fiktív recept és 4 fiktív specifikáció – kapcsolással, ütköző értékkel, nem besorolt
-          adattal és jogszabályi figyelmeztetéssel.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="secondary" className="rounded-full" onClick={loadDemo}>
-            Demó csomag betöltése
-          </Button>
-          <Button variant="ghost" className="rounded-full" onClick={downloadDemo}>
-            <Download className="size-4" /> Demó recept letöltése
-          </Button>
+        <div className="mt-10 rounded-2xl border p-5">
+          <h2 className="font-semibold">Demó termékcsomag</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Fiktív recept és 4 fiktív specifikáció – kapcsolással, ütköző értékkel, nem besorolt
+            adattal és jogszabályi figyelmeztetéssel.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="secondary" className="rounded-full" onClick={loadDemo}>
+              Demó csomag betöltése
+            </Button>
+            <Button variant="ghost" className="rounded-full" onClick={downloadDemo}>
+              <Download className="size-4" /> Demó recept letöltése
+            </Button>
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

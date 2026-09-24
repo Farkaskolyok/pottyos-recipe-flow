@@ -1,3 +1,4 @@
+import { ModeSwitch } from "@/components/rf/ModeSwitch";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,10 @@ function SettingsPage() {
     setBusy(true);
     try {
       const state: State = {
-        products: store.products,
-        dictionary: store.dictionary,
-        settings: store.settings,
+        products: store.allProducts,
+        dictionary: store.allDictionary,
+        settings: store.rawSettings,
+        demoMode: store.demoMode,
         rules: store.rules,
         admin: store.admin,
         categories: store.categories,
@@ -100,6 +102,11 @@ function SettingsPage() {
     <div className="max-w-2xl">
       <PageHeader title="Beállítások" />
       <div className="space-y-6">
+        <Panel>
+          <h2 className="mb-3 font-bold uppercase tracking-wide">Üzemmód</h2>
+          <ModeSwitch />
+          <p className="mt-2 text-xs text-muted-foreground">OFF = Éles teszt</p>
+        </Panel>
         <Panel>
           <h2 className="mb-2 font-bold uppercase tracking-wide">Adattárolás</h2>
           <div className="divide-y">
@@ -189,16 +196,18 @@ function SettingsPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Minden adat csak ezen az eszközön tárolódik. Semmi nem kerül külső szolgáltatásba.
           </p>
-          <Button
-            variant="outline"
-            className="mt-4 rounded-full"
-            onClick={() => {
-              resetDemo();
-              toast.success("Demó adatok visszaállítva");
-            }}
-          >
-            Demó adatok visszaállítása
-          </Button>
+          {store.demoMode && (
+            <Button
+              variant="outline"
+              className="mt-4 rounded-full"
+              onClick={() => {
+                resetDemo();
+                toast.success("Demó adatok visszaállítva");
+              }}
+            >
+              Demó adatok visszaállítása
+            </Button>
+          )}
         </Panel>
       </div>
     </div>
