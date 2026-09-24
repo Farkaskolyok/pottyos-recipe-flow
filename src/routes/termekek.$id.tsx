@@ -33,7 +33,7 @@ import { DocPreview } from "@/components/rf/DocPreview";
 import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineField";
 import { cn } from "@/lib/utils";
 import { SourcesStep } from "@/components/rf/SourcesStep";
-import { openSource } from "@/lib/recipe/sources";
+import { openSource, recipeFileId } from "@/lib/recipe/sources";
 import {
   blockingFor,
   fixTarget,
@@ -891,12 +891,12 @@ function TraceDrawer({
                 </div>
               ))}
             </dl>
-            {v.source?.fileId && (
+            {(v.source?.fileId || v.source?.sheet) && (
               <Button
                 variant="outline"
                 className="mt-4 rounded-full"
                 onClick={() => {
-                  void openSource(v.source?.fileId, v.source?.page).then((ok) => {
+                  void openSource(v.source?.fileId ?? recipeFileId(p.id), v.source?.page).then((ok) => {
                     if (!ok)
                       toast.info(
                         "Az eredeti fájl nincs eltárolva ezen az eszközön (demó adat vagy korábbi feltöltés).",
