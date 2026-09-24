@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { idbAvailable, idbGet, idbPut, STORES } from "@/lib/idb";
 import type { Destination } from "./engine";
 import type { Segment } from "./engine";
 
