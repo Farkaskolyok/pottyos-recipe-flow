@@ -2,7 +2,7 @@ import type { DictionaryEntry, MatchStatus } from "./types";
 import { norm } from "./format";
 
 // Fictional demo dictionary. No real recipe data.
-export const DEMO_DICTIONARY: DictionaryEntry[] = [
+const RAW_DEMO_DICTIONARY: Omit<DictionaryEntry, "isDemo">[] = [
   {
     id: "d-joghurtbev",
     technicalName: "Joghurtos bevonómassza",
@@ -151,3 +151,5 @@ export function matchIngredient(
   if (best) return { status: "review", entryId: best.id };
   return { status: "unknown", entryId: null };
 }
+
+export const DEMO_DICTIONARY: DictionaryEntry[] = RAW_DEMO_DICTIONARY.map((e) => ({ ...e, isDemo: true }));
