@@ -452,10 +452,10 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
     const suggested = files.filter((f) => f.linkState === "suggested").length;
     const open = findConflicts(p).filter((c) => !dec[c.id]).length;
     const unk = files.reduce((n, f) => n + f.unknown.filter((u) => !u.decision).length, 0);
-    const reg = files.reduce(
-      (n, f) => n + f.regulatory.filter((r) => r.status === "review").length,
-      0,
-    );
+    const regIds = (pred: (r: { status: string }) => boolean) =>
+      new Set(files.flatMap((f) => f.regulatory.filter(pred).map((r) => r.identifier))).size;
+    const reg = regIds((r) => regStatus(r) === "unverified");
+    const regErr = regIds(regBad);
     checks.push({
       id: "src-specs",
       level: "ok",
@@ -504,11 +504,19 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
         text: `${unk} új / nem besorolt adat`,
         action: "sources",
       });
+    if (regErr)
+      checks.push({
+        id: "src-reg-bad",
+        level: "error",
+        text: `JOGSZABÁLYI HIVATKOZÁS: ${regErr} nem található vagy hibás`,
+        action: "sources",
+      });
+    // Unverified references are a warning only and never block approval.
     if (reg)
       checks.push({
         id: "src-reg",
-        level: "error",
-        text: `JOGSZABÁLYI ELLENŐRZÉS: ${reg} hivatkozás ellenőrzendő`,
+        level: "warn",
+        text: `Ellenőrizendő jogszabályok: ${reg}`,
         action: "sources",
       });
   }

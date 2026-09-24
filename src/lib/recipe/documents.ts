@@ -175,7 +175,7 @@ export function buildDocs(
   const regs = [
     b.legalRef.display,
     ...(p.files ?? []).flatMap((f) =>
-      f.regulatory.filter((r) => r.status === "ok").map((r) => r.identifier),
+      f.regulatory.filter(regVerified).map((r) => r.identifier),
     ),
   ].filter((x, i, a) => x && a.indexOf(x) === i);
   const byId = new Map(dict.map((d) => [d.id, d]));
