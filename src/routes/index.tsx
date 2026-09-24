@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Receptből dokumentum. Egységesen. Ellenőrizhetően. Gyártmánylap, termékspecifikáció és csomagolási szöveg egy receptből.",
+          "Gyártmánylap, termékspecifikáció és csomagolási szöveg egy receptből.",
       },
       { property: "og:title", content: "PÖTTYÖS RecipeFlow" },
       {
@@ -49,18 +49,10 @@ function Home() {
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           <span className="text-primary">PÖTTYÖS</span> RecipeFlow
         </h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Receptből dokumentum. Egységesen. Ellenőrizhetően.
-        </p>
       </section>
 
       <section className="mb-10 flex flex-col items-start gap-6 rounded-3xl bg-accent p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-        <div>
-          <h2 className="text-xl font-bold">Új termék</h2>
-          <p className="mt-1 text-muted-foreground">
-            Recept XLS/XLSX feltöltése – a feldolgozás ezen a gépen történik.
-          </p>
-        </div>
+        <h2 className="text-xl font-bold">Új termék</h2>
         <Button asChild size="lg" className="h-12 rounded-full px-6 text-base">
           <Link to="/uj">
             <Plus className="size-5" /> Új termék feldolgozása

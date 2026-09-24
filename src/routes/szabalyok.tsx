@@ -32,10 +32,7 @@ function Rules() {
   const cats = [...new Set(rules.map((r) => r.category))];
   return (
     <div>
-      <PageHeader
-        title="Szabályok"
-        subtitle="Minden érték ezekkel a rögzített szabályokkal készül – nincs találgatás."
-      />
+      <PageHeader title="Szabályok" />
       <DesktopHint />
       <div className="space-y-6">
         {cats.map((c) => (
@@ -47,16 +44,17 @@ function Rules() {
                 .map((r) => (
                   <li key={r.id} className="flex items-start gap-4 py-3">
                     <div className="flex-1">
-                      <div className="font-semibold">
-                        {r.name}{" "}
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {r.version} · {r.scope} · prioritás {r.priority}
-                        </span>
-                      </div>
+                      <div className="font-semibold">{r.name}</div>
                       <p className="text-sm text-muted-foreground">{r.description}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Bemenet: {r.input} · Feltétel: {r.condition} · Kimenet: {r.output}
-                      </p>
+                      <details className="mt-1 text-xs text-muted-foreground">
+                        <summary className="cursor-pointer select-none">Részletek</summary>
+                        <p className="mt-1">
+                          {r.version} · {r.scope} · prioritás {r.priority}
+                        </p>
+                        <p>
+                          Bemenet: {r.input} · Feltétel: {r.condition} · Kimenet: {r.output}
+                        </p>
+                      </details>
                     </div>
                     <Switch
                       checked={r.active}
@@ -72,10 +70,8 @@ function Rules() {
         ))}
 
         <Panel>
-          <h2 className="mb-1 font-bold">Mezők megjelenése</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Melyik adat melyik dokumentumba kerüljön.
-          </p>
+          <h2 className="mb-4 font-bold">Mezők megjelenése</h2>
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
