@@ -59,6 +59,8 @@ export interface ExtractedField {
   sheet?: string;
   cell?: string;
   original: string;
+  /** set when the extracted value failed a sanity check or repeats with a different value */
+  suspect?: string;
   /** output destinations */
   outputs?: ("sheet" | "spec" | "pack" | "internal")[];
 }
@@ -505,9 +507,86 @@ const QUALITY_ALIASES: { key: string; label: string; unit: string; aliases: stri
     key: "q.yeast",
     label: "Élesztő és penész",
     unit: "CFU/g",
-    aliases: ["yeasts and moulds", "yeast", "eleszto"],
+    aliases: ["yeasts and moulds", "yeast and mould", "yeast and mold", "yeast", "eleszto"],
+  },
+  {
+    key: "q.salmonella",
+    label: "Salmonella",
+    unit: "/25 g",
+    aliases: ["salmonella"],
+  },
+  { key: "q.ecoli", label: "E. coli", unit: "CFU/g", aliases: ["e coli", "escherichia coli"] },
+  {
+    key: "q.saureus",
+    label: "S. aureus",
+    unit: "CFU/g",
+    aliases: ["s aureus", "staphylococcus aureus", "koagulaz pozitiv staphylococcus"],
   },
 ];
+const MICRO = new Set(["q.tpc", "q.yeast", "q.salmonella", "q.ecoli", "q.saureus"]);
+
+/* ---------- source text noise: stored as source info, never a user task ---------- */
+const STD_REF =
+  /\b(?:MSZ|EN|ISO|DIN|AOAC|NMKL|IDF|BS|ASTM)(?:\s*(?:EN|ISO|IDF|TS))*\s*\d+(?:[-/.]\d+)*(?::\s?\d{4})?(?:\/[A-Z]\d+:\d{4})?/gi;
+const NOISE: RegExp[] = [
+  /^(?:oldal(?:szám)?|page|lap)\b/i,
+  /\b(?:oldalszám|page)\s*:?\s*\d+\s*(?:\/|of|-)\s*\d+/i,
+  /^\s*\d+\s*(?:\/|of)\s*\d+\s*$/i,
+  /^(?:version|verzió|verzio|revision|revízió|rev\.?|kiadás|issue|edition)\b/i,
+  /^(?:date|dátum|datum|kelt|issued|valid from|érvényes|prepared|készítette|approved|jóváhagyta|document|dokumentum|doc\.? ?no|form|nyomtatvány|author|szerző)\b/i,
+  /\bdefinition\b|\bdefiníció|\bdefinicio|\bbelongs to\b|\baccording to\b|\bértelmében\b/i,
+  /^(?:us|eu|ec|eк)\s+(?:dietary|sugars|fibre|fiber)/i,
+  /^(?:table of contents|tartalom|contents|header|footer|confidential|bizalmas)\b/i,
+];
+export function isNoiseText(t: string) {
+  const x = t.trim();
+  if (x.length < 4) return true;
+  if (NOISE.some((r) => r.test(x))) return true;
+  // standard identifiers only (e.g. "MSZ EN ISO 6579:2006")
+  if (!x.replace(STD_REF, "").replace(/[\s:;,.\-–/()]/g, "")) return true;
+  const lv = x.match(/^([^:]{2,60}):\s*(.*)$/);
+  // label with no usable value, or a value that is only a standard / version / page reference
+  if (lv && !lv[2].replace(STD_REF, "").replace(/[\s\-–—/.:0]/g, "").length) return true;
+  return false;
+}
+
+/** Parses a measured value / limit that is clearly connected to the parameter. */
+export function parseQualityValue(key: string, raw: string) {
+  const method = raw.match(STD_REF)?.map((m) => m.trim()).join(", ");
+  const methodWord = raw.match(/(?:method|módszer|mérés)\s*:?\s*([^;,]+)/i)?.[1]?.trim();
+  let rest = raw
+    .replace(/(?:method|módszer|mérés)\s*:?\s*[^;,]+/gi, " ")
+    .replace(STD_REF, " ")
+    .replace(/\b(?:19|20)\d{2}\b(?![.,]\d)/g, " ") // bare years
+    .replace(/\/\s*\d+\s*g\b/gi, " ") // "/25 g" sample size
+    .replace(/\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b/g, " "); // dates
+  rest = rest.replace(/\s+/g, " ").trim();
+  if (MICRO.has(key)) {
+    if (/negat|absent|nem kimutat|not detected|nd\b|hiány|nincs/i.test(rest))
+      return { value: key === "q.salmonella" ? "0" : "nem kimutatható", num: 0, method: method ?? methodWord };
+  }
+  const OP = "(?:[=<>≤≥]|max\\.?|min\\.?|maximum|minimum|legfeljebb|legalább)";
+  const NUMS = "(-?\\d+(?:[.,]\\d+)?(?:\\s?[x×]\\s?10\\^?\\d+)?)";
+  const tries = [
+    new RegExp(`^(${OP}\\s*)?${NUMS}(\\s*[-–]\\s*${NUMS})?`, "i"),
+    new RegExp(`(${OP}\\s*)${NUMS}(\\s*[-–]\\s*${NUMS})?`, "i"),
+    new RegExp(`${NUMS}\\s*[-–]\\s*${NUMS}`),
+    MICRO.has(key) ? new RegExp(`${NUMS}\\s*(?:cfu|tke|kfu)`, "i") : null,
+    /%|°\s?bx|kg\s?\/\s?dm/i.test(rest) ? new RegExp(`${NUMS}\\s*(?:%|°\\s?bx|kg)`, "i") : null,
+  ].filter(Boolean) as RegExp[];
+  let m: RegExpMatchArray | null = null;
+  for (const r of tries) if ((m = rest.match(r))) break;
+  if (!m) return null;
+  const txt = m[0].trim().replace(/\s+/g, " ");
+  const first = txt.match(/-?\d+(?:[.,]\d+)?/)![0];
+  const num = toN(first);
+  let suspect: string | undefined;
+  if (key === "q.ph" && (num < 0 || num > 14)) suspect = "pH érték 0–14 tartományon kívül";
+  if (key === "q.moisture" && (num < 0 || num > 100)) suspect = "Százalék 0–100% tartományon kívül";
+  if (MICRO.has(key) && num >= 1900 && num <= 2100 && !/cfu|tke|kfu|[<>≤≥]/i.test(txt))
+    suspect = "Évszámnak tűnő érték";
+  return { value: txt.replace(".", ","), num, method: method ?? methodWord, suspect };
+}
 
 const NUM = /(-?\d+(?:[.,]\d+)?)/;
 const toN = (s: string) => Number(s.replace(",", "."));
@@ -550,28 +629,39 @@ export function extractFromBlocks(blocks: Block[]) {
     const lv = splitLabel(b.text);
     const lh = lv ? norm(lv[0]) : h;
 
-    const q = QUALITY_ALIASES.find((qa) => startsWithAlias(lh, qa.aliases));
-    if (q && !seen.has(q.key)) {
-      const rest = lv ? lv[1] : b.text;
-      const n = rest.match(NUM);
-      if (n) {
-        seen.add(q.key);
+    const q = QUALITY_ALIASES.find(
+      (qa) => startsWithAlias(lh, qa.aliases) || startsWithAlias(h, qa.aliases),
+    );
+    if (q) {
+      const rest = lv ? lv[1] : b.text.slice(b.text.toLowerCase().indexOf(q.aliases[0]!) + 1);
+      const labelOnly = (lv ? lv[0] : b.text).replace(/^[^a-z]*[a-z. ]+/i, "");
+      const pv = parseQualityValue(q.key, lv ? rest : b.text.replace(/^[^\d<>≤≥=]*?(?=[\d<>≤≥=]|max|min|neg|absent|nem)/i, ""));
+      void labelOnly;
+      if (pv) {
         const tol = rest.match(/(±\s?\d+(?:[.,]\d+)?\s?%?)/)?.[1]?.replace(/\s/g, "");
-        const method = rest.match(/(?:method|módszer|mérés)\s*:?\s*([^;,]+)/i)?.[1]?.trim();
+        const prev = fields.find((x) => x.key === q.key);
+        if (prev) {
+          // repeated header / section: identical → keep one; different → one conflict for review
+          if (prev.value !== pv.value && !prev.suspect?.startsWith("Eltérő"))
+            prev.suspect = `Eltérő ismételt érték: ${prev.value} / ${pv.value}`;
+          continue;
+        }
         fields.push({
           key: q.key,
           label: q.label,
-          value: n[1].replace(".", ","),
-          num: toN(n[1]),
+          value: pv.value,
+          num: pv.num,
           unit: q.unit,
           tolerance: tol,
-          method,
+          method: pv.method,
+          suspect: pv.suspect,
           original: b.text,
           outputs: ["sheet", "spec"],
           ...loc(b),
         });
         continue;
       }
+      if (lv) continue; // quality label without a usable value: source info only
     }
     const nu = NUTRIENT_ALIASES.find(([, al]) => startsWithAlias(lh, al) || startsWithAlias(h, al));
     if (nu && !seen.has(`n.${nu[0]}`)) {
@@ -606,8 +696,16 @@ export function extractFromBlocks(blocks: Block[]) {
         });
         continue;
       }
-      if (!f && unknown.length < 25 && lv[1].length > 2)
-        unknown.push({ id: uid(), text: b.text.slice(0, 300), page: b.page });
+      if (f) continue; // repeated label
+      const txt = b.text.slice(0, 300);
+      const k = norm(txt);
+      if (
+        unknown.length < 25 &&
+        lv[1].length > 2 &&
+        !isNoiseText(b.text) &&
+        !unknown.some((u) => norm(u.text) === k)
+      )
+        unknown.push({ id: uid(), text: txt, page: b.page });
     }
   }
   return { fields, regulatory, unknown };
