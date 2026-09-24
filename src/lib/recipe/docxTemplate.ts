@@ -57,14 +57,76 @@ function fillXml(xml: string, fields: Record<string, string>, rich: Record<strin
   );
 }
 
+/** Bump when the master .docx files in /public/templates are regenerated. */
+export const TEMPLATE_VERSION = "2026-09-24.1";
+
+interface StoredTemplate {
+  version: string;
+  data: ArrayBuffer;
+  savedAt: string;
+}
+
+/**
+ * Loads a master template. Offline-first: the approved master is kept in IndexedDB on this
+ * device. The network copy is only used once (first setup / new template version) and then stored.
+ */
+export async function loadMaster(kind: Destination): Promise<ArrayBuffer> {
+  const id = MASTER_FILES[kind].id;
+  if (idbAvailable()) {
+    const rec = await idbGet<StoredTemplate>(STORES.templates, id).catch(() => undefined);
+    if (rec?.data && rec.version === TEMPLATE_VERSION) return rec.data;
+    try {
+      const data = await fetchMaster(kind);
+      await idbPut(STORES.templates, id, {
+        version: TEMPLATE_VERSION,
+        data,
+        savedAt: new Date().toISOString(),
+      } satisfies StoredTemplate).catch(() => {});
+      return data;
+    } catch (e) {
+      // Offline with an older stored version: still better than nothing.
+      if (rec?.data) return rec.data;
+      throw e;
+    }
+  }
+  return fetchMaster(kind);
+}
+
+async function fetchMaster(kind: Destination) {
+  const res = await fetch(`/templates/${MASTER_FILES[kind].file}`);
+  if (!res.ok) throw new Error(`Hiányzó mestersablon: ${MASTER_FILES[kind].id}`);
+  return res.arrayBuffer();
+}
+
+/** Stores all three masters locally (called on app start) so Word export works without network. */
+export async function ensureMasterTemplates() {
+  const out: Record<string, boolean> = {};
+  for (const k of Object.keys(MASTER_FILES) as Destination[]) {
+    out[MASTER_FILES[k].id] = await loadMaster(k).then(
+      () => true,
+      () => false,
+    );
+  }
+  return out;
+}
+
+export async function templatesStoredLocally() {
+  if (!idbAvailable()) return false;
+  for (const k of Object.keys(MASTER_FILES) as Destination[]) {
+    const r = await idbGet<StoredTemplate>(STORES.templates, MASTER_FILES[k].id).catch(
+      () => undefined,
+    );
+    if (!r?.data) return false;
+  }
+  return true;
+}
+
 export async function fillMaster(
   kind: Destination,
   fields: Record<string, string>,
   rich: Record<string, Segment[]> = {},
 ) {
-  const res = await fetch(`/templates/${MASTER_FILES[kind].file}`);
-  if (!res.ok) throw new Error(`Hiányzó mestersablon: ${MASTER_FILES[kind].id}`);
-  const zip = await JSZip.loadAsync(await res.arrayBuffer());
+  const zip = await JSZip.loadAsync(await loadMaster(kind));
   const parts = Object.keys(zip.files).filter((n) =>
     /^word\/(document|header\d+|footer\d+)\.xml$/.test(n),
   );
