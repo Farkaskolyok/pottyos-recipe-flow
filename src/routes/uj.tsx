@@ -70,6 +70,7 @@ function NewProduct() {
       toast.error("Receptúraként csak XLS vagy XLSX fájl tölthető fel.");
       return;
     }
+    setFromDemo(false);
     try {
       const w = await readWorkbook(f);
       setFile(f);
@@ -127,8 +128,8 @@ function NewProduct() {
   }
 
   function loadDemo() {
+    void loadRecipe(demoFile(DEMO_RECIPES[3]));
     setFromDemo(true);
-    loadRecipe(demoFile(DEMO_RECIPES[3]));
     const d = demoSpecFiles();
     void ensureDemoSourceBlobs(d);
     setSpecs(d);
