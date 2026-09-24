@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { StoreProvider, useStore } from "@/lib/store";
@@ -67,6 +67,5 @@ describe("termék törlése", () => {
     await waitFor(async () => {
       for (const id of ids) expect(await loadFileBlob(id)).toBeUndefined();
     });
-    void fireEvent;
   });
 });

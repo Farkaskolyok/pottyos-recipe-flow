@@ -132,7 +132,9 @@ function Products() {
                 <ProductActions
                   id={p.id}
                   name={String(
-                    p.overrides.productName?.value ?? p.raw.meta.productName?.value ?? p.raw.fileName,
+                    p.overrides.productName?.value ??
+                      p.raw.meta.productName?.value ??
+                      p.raw.fileName,
                   )}
                 />
               </li>
