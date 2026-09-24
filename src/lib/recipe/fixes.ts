@@ -35,6 +35,8 @@ export function fixTarget(c: Check): FixTarget {
         return { step: "Források", anchor: "Alapanyagok összekapcsolása", label: "ÖSSZEKAPCSOLÁS" };
       if (c.id === "src-conf")
         return { step: "Források", anchor: "Eltérő adatok", label: "ELTÉRÉSEK MEGNYITÁSA" };
+      if (c.id === "src-qsus")
+        return { step: "Források", anchor: "Minőségi paraméterek", label: "ELLENŐRZÉS" };
       if (c.id === "src-unk")
         return { step: "Források", anchor: "Új / nem besorolt adat", label: "JAVÍTÁS" };
       if (c.id === "src-reg" || c.id === "src-reg-bad")

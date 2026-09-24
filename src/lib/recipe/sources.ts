@@ -633,10 +633,8 @@ export function extractFromBlocks(blocks: Block[]) {
       (qa) => startsWithAlias(lh, qa.aliases) || startsWithAlias(h, qa.aliases),
     );
     if (q) {
-      const rest = lv ? lv[1] : b.text.slice(b.text.toLowerCase().indexOf(q.aliases[0]!) + 1);
-      const labelOnly = (lv ? lv[0] : b.text).replace(/^[^a-z]*[a-z. ]+/i, "");
-      const pv = parseQualityValue(q.key, lv ? rest : b.text.replace(/^[^\d<>≤≥=]*?(?=[\d<>≤≥=]|max|min|neg|absent|nem)/i, ""));
-      void labelOnly;
+      const rest = lv ? lv[1] : b.text.replace(/^[\p{L}.\s]+/u, "");
+      const pv = parseQualityValue(q.key, rest);
       if (pv) {
         const tol = rest.match(/(±\s?\d+(?:[.,]\d+)?\s?%?)/)?.[1]?.replace(/\s/g, "");
         const prev = fields.find((x) => x.key === q.key);

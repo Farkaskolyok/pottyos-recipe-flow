@@ -174,7 +174,7 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
     links: suggested.length ? "warn" : "ok",
     conf: openConf.length ? "error" : "ok",
     unk: unknown.some(({ u }) => !u.decision) ? "warn" : "ok",
-    quality: quality.length ? "ok" : "warn",
+    quality: quality.some(({ x }) => x.suspect) ? "warn" : "ok",
     reg: regs.some(({ r }) => regBad(r))
       ? "error"
       : regs.some(({ r }) => regStatus(r) === "unverified")
@@ -590,6 +590,11 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                     <td className="py-2 pr-3 font-medium">{x.label}</td>
                     <td className="pr-3">
                       {x.value} {x.unit}
+                      {x.suspect && (
+                        <span className="block text-xs font-semibold text-warning">
+                          ! {x.suspect}
+                        </span>
+                      )}
                     </td>
                     <td className="pr-3">{x.tolerance ?? "—"}</td>
                     <td className="pr-3 text-muted-foreground">{x.method ?? "—"}</td>
@@ -918,7 +923,7 @@ function FieldBlock({
   empty?: string;
 }) {
   return (
-    <Block title={title} level={items.length ? "ok" : "warn"}>
+    <Block title={title} level="ok">
       {items.length ? (
         <ul className="divide-y text-sm">
           {items.map(({ f, x }, i) => (
