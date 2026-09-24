@@ -210,6 +210,8 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
     fileName: `${safe}_Gyartmanylap_${p.docVersion}.docx`,
     meta,
     used: used("sheet"),
+    fields: {},
+    rich: {},
     blocks: [
       { type: "title", lines: ["GYÁRTMÁNYLAP", name.toUpperCase(), val("sheet", "description")] },
       {
@@ -279,6 +281,8 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
     fileName: `${safe}_Kesztermek_specifikacio_${p.docVersion}.docx`,
     meta,
     used: used("spec"),
+    fields: {},
+    rich: {},
     blocks: [
       { type: "heading", text: "1. Általános információk / General information" },
       { type: "kv", rows: [
@@ -333,6 +337,8 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
     fileName: `${safe}_Szovegterv_${p.docVersion}.docx`,
     meta,
     used: used("pack"),
+    fields: {},
+    rich: {},
     blocks: [
       { type: "note", text: "Minimális betűméret (x) = 1,2 mm, kivéve nettó tömeg / Minimal letter size (x) = 1,2 mm, except net weight" },
       { type: "side", text: "Front oldal / Front side" },
