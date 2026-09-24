@@ -1,6 +1,7 @@
 import type { Product, DictionaryEntry } from "./types";
 import type { Dataset, Segment, Settings, Destination } from "./engine";
 import { huDate, huNumber } from "./format";
+import { regVerified } from "./sources";
 
 /*
  * Three separate MASTER TEMPLATES. Their structure (section order, numbering, tables,
