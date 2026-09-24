@@ -592,8 +592,12 @@ const NUM = /(-?\d+(?:[.,]\d+)?)/;
 const toN = (s: string) => Number(s.replace(",", "."));
 
 function splitLabel(t: string): [string, string] | null {
-  const m = t.match(/^\s*(?:\d+(?:\.\d+)*\.?\s+)?([^:\t]{2,60}?)\s*[:\t]\s*(.+)$/);
-  return m ? [m[1], m[2].trim()] : null;
+  // a colon between digits ("6579:2006") belongs to a standard identifier, not a label
+  const m = t
+    .replace(/(\d):(\d)/g, "$1\u2236$2")
+    .match(/^\s*(?:\d+(?:\.\d+)*\.?\s+)?([^:\t]{2,60}?)\s*[:\t]\s*(.+)$/);
+  if (m) m[2] = m[2].replace(/\u2236/g, ":");
+  return m ? [m[1].replace(/\u2236/g, ":"), m[2].trim()] : null;
 }
 
 function startsWithAlias(h: string, aliases: string[]) {
