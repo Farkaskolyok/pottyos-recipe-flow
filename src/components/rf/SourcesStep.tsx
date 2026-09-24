@@ -20,7 +20,11 @@ import {
   findConflicts,
   SOURCE_TYPE_LABELS,
   type ExtractedField,
-  type RegStatus,
+  regBad,
+  regStatus,
+  regVerified,
+  verifyRegulationOnline,
+  type RegRef,
   type SourceFile,
   type SourceType,
 } from "@/lib/recipe/sources";
@@ -95,6 +99,75 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
     f.fields.filter((x) => /packaging/.test(x.key)).map((x) => ({ f, x })),
   );
   const openConf = conflicts.filter((c) => !dec[c.id]);
+  // one verification status per normalized identifier, shared by every source document
+  const regGroups = [...new Set(regs.map(({ r }) => r.identifier))].map((id) => {
+    const items = regs.filter(({ r }) => r.identifier === id);
+    const best =
+      items.find(({ r }) => regVerified(r)) ??
+      items.find(({ r }) => regBad(r)) ??
+      items[0]!;
+    return { id, r: best.r, items };
+  });
+  const [checking, setChecking] = useState<string | null>(null);
+  const setReg = (identifier: string, patch: Partial<RegRef>, note: string) =>
+    onChange(
+      {
+        ...p,
+        files: files.map((f) => ({
+          ...f,
+          regulatory: f.regulatory.map((x) =>
+            x.identifier === identifier ? { ...x, ...patch } : x,
+          ),
+        })),
+        audit: audit(note),
+      },
+      note,
+    );
+  const markManual = (identifier: string) =>
+    setReg(
+      identifier,
+      {
+        status: "verified_local",
+        reviewedAt: now(),
+        reviewedBy: user,
+        verificationMethod: "manual",
+        verificationSource: undefined,
+        sourceUrl: undefined,
+      },
+      `Jogszabályi hivatkozás kézzel ellenőrzöttnek jelölve: ${identifier}`,
+    );
+  const checkOnline = async (identifier: string) => {
+    setChecking(identifier);
+    const res = await verifyRegulationOnline(identifier);
+    setChecking(null);
+    if (res.kind === "offline") {
+      toast.error("Online ellenőrzés nem elérhető");
+      return;
+    }
+    const base = {
+      reviewedAt: now(),
+      reviewedBy: user,
+      verificationMethod: "online" as const,
+    };
+    if (res.kind === "found") {
+      setReg(
+        identifier,
+        { ...base, status: "verified_online", verificationSource: res.source, sourceUrl: res.url },
+        `Online ellenőrzés: ${identifier} → megtalálva (${res.source})`,
+      );
+      toast.success(`${identifier}: Online ellenőrzött`);
+    } else if (res.kind === "not_found") {
+      setReg(
+        identifier,
+        { ...base, status: "not_found", verificationSource: res.source, sourceUrl: undefined },
+        `Online ellenőrzés: ${identifier} → nem található`,
+      );
+      toast.error(`${identifier}: Nem található`);
+    } else {
+      setReg(identifier, { ...base, status: "invalid" }, `Online ellenőrzés: ${identifier} → hibás`);
+      toast.error(`${identifier}: Hibás hivatkozás`);
+    }
+  };
 
   const lv = {
     files: worst(files.map((f) => (f.status === "ok" ? "ok" : "warn"))),
@@ -102,9 +175,9 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
     conf: openConf.length ? "error" : "ok",
     unk: unknown.some(({ u }) => !u.decision) ? "warn" : "ok",
     quality: quality.length ? "ok" : "warn",
-    reg: regs.some(({ r }) => r.status === "review")
+    reg: regs.some(({ r }) => regBad(r))
       ? "error"
-      : regs.some(({ r }) => r.status === "invalid")
+      : regs.some(({ r }) => regStatus(r) === "unverified")
         ? "warn"
         : "ok",
   } as Record<string, CheckLevel>;
@@ -557,57 +630,73 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
       </Block>
 
       <Block title="Jogszabályi ellenőrzés" level={lv.reg}>
-        {regs.length ? (
+        {regGroups.length ? (
           <ul className="space-y-2">
-            {regs.map(({ f, r }) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2 text-sm"
-              >
-                <span className="w-32 font-semibold">{r.identifier}</span>
-                <span
-                  className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
-                  title={r.original}
+            {regGroups.map(({ id, r, items }) => {
+              const done = regVerified(r);
+              return (
+                <li
+                  key={id}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2 text-sm"
                 >
-                  {f.name}
-                  {r.page ? ` · ${r.page}. oldal` : ""}
-                </span>
-                {admin ? (
-                  <Select
-                    value={r.status}
-                    onValueChange={(v) =>
-                      setFile(
-                        f.id,
-                        {
-                          regulatory: f.regulatory.map((x) =>
-                            x.id === r.id
-                              ? {
-                                  ...x,
-                                  status: v as RegStatus,
-                                  reviewedAt: now(),
-                                  reviewedBy: user,
-                                }
-                              : x,
-                          ),
-                        },
-                        `Jogszabályi hivatkozás: ${r.identifier} → ${v}`,
-                      )
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-auto border-none bg-transparent p-0 shadow-none">
-                      <RegBadge status={r.status} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ok">✓ Ellenőrzött</SelectItem>
-                      <SelectItem value="review">! Ellenőrzendő</SelectItem>
-                      <SelectItem value="invalid">× Nem használható</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
+                  <span className="w-32 font-semibold">{id}</span>
+                  <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+                    {items.map(({ f, r: x }) => (
+                      <span key={x.id} className="block truncate" title={x.original}>
+                        {f.name}
+                        {x.page ? ` · ${x.page}. oldal` : ""}
+                      </span>
+                    ))}
+                    {r.reviewedAt && r.verificationMethod !== "library" && (
+                      <span className="block">
+                        {r.verificationMethod === "online" ? "Online" : "Kézi"} ·{" "}
+                        {r.reviewedBy} · {new Date(r.reviewedAt).toLocaleString("hu-HU")}
+                        {r.sourceUrl && (
+                          <>
+                            {" · "}
+                            <a
+                              href={r.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline"
+                            >
+                              {r.verificationSource ?? "Forrás"}
+                            </a>
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </span>
                   <RegBadge status={r.status} />
-                )}
-              </li>
-            ))}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-full text-xs font-semibold"
+                      disabled={checking === id}
+                      onClick={() => void checkOnline(id)}
+                    >
+                      {checking === id
+                        ? "…"
+                        : done
+                          ? "ÚJRA ELLENŐRZÉS"
+                          : "ONLINE ELLENŐRZÉS"}
+                    </Button>
+                    {done ? (
+                      <span className="self-center text-xs font-bold text-success">ELLENŐRZÖTT</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-full text-xs font-semibold"
+                        onClick={() => markManual(id)}
+                      >
+                        ELLENŐRZÖTTNEK JELÖLÖM
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
@@ -615,8 +704,8 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
           </p>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          A régi specifikációkban szereplő hivatkozások nem tekinthetők automatikusan hatályosnak. A
-          jogszabályi szöveg nem frissül automatikusan.
+          Online ellenőrzéskor csak a jogszabály azonosítója kerül elküldésre (EUR-Lex), semmilyen
+          termék- vagy dokumentumadat nem.
         </p>
       </Block>
 
