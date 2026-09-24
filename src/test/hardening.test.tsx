@@ -1,3 +1,4 @@
+import type React from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -66,11 +67,19 @@ describe("master templates – structure and placeholders", () => {
       expect(parts.some((p) => p.n === "word/document.xml")).toBe(true);
       for (const p of parts) expect(parseOk(p.xml), p.n).toBe(true);
       const found = new Set(
-        parts.flatMap((p) => [...textOf(p.xml).matchAll(/\{\{([A-Za-z0-9_]+)\}\}/g)].map((m) => m[1])),
+        parts.flatMap((p) =>
+          [...textOf(p.xml).matchAll(/\{\{([A-Za-z0-9_]+)\}\}/g)].map((m) => m[1]),
+        ),
       );
       const expected = new Set(MASTER_PLACEHOLDERS[k]);
-      expect([...expected].filter((x) => !found.has(x)), "missing").toEqual([]);
-      expect([...found].filter((x) => !expected.has(x)), "unknown").toEqual([]);
+      expect(
+        [...expected].filter((x) => !found.has(x)),
+        "missing",
+      ).toEqual([]);
+      expect(
+        [...found].filter((x) => !expected.has(x)),
+        "unknown",
+      ).toEqual([]);
     });
   }
 });
@@ -80,8 +89,20 @@ describe("historical value leak test (HARD FAILURE)", () => {
   const TOK = /[0-9A-Za-zÀ-ž][0-9A-Za-zÀ-ž.,/%-]*[0-9A-Za-zÀ-ž%]|[0-9]/g;
   const h = (t: string) => createHash("sha256").update(t.toLowerCase()).digest("hex").slice(0, 20);
   const EXPLICIT = [
-    "106662", "2106909855", "5998200747953", "FrieslandCampina", "Mátészalka", "Túró Rudi",
-    "Popomájer", "Kücsön", "Mészárosné", "Jármi", "pottyos.hu", "38g", "38 g", "27 nap",
+    "106662",
+    "2106909855",
+    "5998200747953",
+    "FrieslandCampina",
+    "Mátészalka",
+    "Túró Rudi",
+    "Popomájer",
+    "Kücsön",
+    "Mészárosné",
+    "Jármi",
+    "pottyos.hu",
+    "38g",
+    "38 g",
+    "27 nap",
   ];
   it("denylist is loaded", () => expect(deny.size).toBeGreaterThan(100));
   for (const k of KINDS) {
@@ -150,9 +171,8 @@ describe("offline Word export", () => {
 
 describe("orphaned file cleanup", () => {
   it("deleting a source file removes its stored blob", async () => {
-    const { persistSourceFile, deleteSourceFile, getSourceBlob } = await import(
-      "@/lib/recipe/sources"
-    );
+    const { persistSourceFile, deleteSourceFile, getSourceBlob } =
+      await import("@/lib/recipe/sources");
     await persistSourceFile("spec:x1", new File(["a"], "a.pdf"));
     expect(await loadFileBlob("spec:x1")).toBeTruthy();
     await deleteSourceFile("spec:x1");
@@ -247,7 +267,7 @@ describe("persistent storage status", () => {
       },
     });
     const { Route } = await import("@/routes/beallitasok");
-    const C = Route.options.component as () => JSX.Element;
+    const C = Route.options.component as () => React.ReactElement;
     render(
       <StoreProvider>
         <C />
