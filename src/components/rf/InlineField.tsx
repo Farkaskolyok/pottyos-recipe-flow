@@ -15,6 +15,9 @@ export interface EditApi {
   get: (key: string) => TracedValue | undefined;
   set: (key: string, value: string, note: string, scope: "product" | "default") => void;
   restore: (key: string) => void;
+  /** field requested by a JAVÍTÁS button: open it in edit mode once */
+  focusKey?: string | null;
+  clearFocus?: () => void;
 }
 
 const Ctx = createContext<EditApi | null>(null);
@@ -49,6 +52,13 @@ export function InlineField({
   const [editing, setEditing] = useState(false);
   const v = api?.get(fieldKey);
   const def = fieldDef(fieldKey, label ?? v?.label);
+  const wantFocus = !!api && api.focusKey === fieldKey && !!v && canEdit(def, admin);
+  useEffect(() => {
+    if (wantFocus) {
+      setEditing(true);
+      api?.clearFocus?.();
+    }
+  }, [wantFocus, api]);
   if (!api || !v) return <>{children ?? v?.display ?? emptyText}</>;
   const editable = canEdit(def, admin);
   const locked = !editable && def.kind === "regulatory";
@@ -56,6 +66,7 @@ export function InlineField({
 
   if (editing)
     return (
+      <span data-anchor={`field:${fieldKey}`} className={block ? "block" : "inline-block"}>
       <Editor
         def={def}
         v={v}
@@ -66,6 +77,7 @@ export function InlineField({
           setEditing(false);
         }}
       />
+      </span>
     );
 
   const marks = (
@@ -88,13 +100,13 @@ export function InlineField({
 
   if (block)
     return (
-      <div className={cn("group/f relative pr-14", className)}>
+      <div data-anchor={`field:${fieldKey}`} className={cn("group/f relative pr-14", className)}>
         <div className="absolute right-0 top-0 flex items-center gap-2">{marks}</div>
         {shown}
       </div>
     );
   return (
-    <span className={cn("group/f inline-flex flex-wrap items-baseline gap-x-1.5", className)}>
+    <span data-anchor={`field:${fieldKey}`} className={cn("group/f inline-flex flex-wrap items-baseline gap-x-1.5", className)}>
       {def.editType === "DROPDOWN" && editable ? (
         <button type="button" className="text-left" onClick={() => setEditing(true)}>
           {shown}
