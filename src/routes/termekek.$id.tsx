@@ -694,7 +694,7 @@ function ApproveStep({
     ["Alapanyagok", has(["rev", "unk", "def"])],
     ["Tápérték", has(["energy"])],
     ["Csomagolási szöveg", has(["mkt", "mfr", "txt"])],
-    ["Dokumentumok", []],
+    ["Dokumentumok", has(ds.checks.filter((c) => c.id.startsWith("reg-")).map((c) => c.id))],
   ];
   const blocked = ds.counts.error > 0;
   return (
