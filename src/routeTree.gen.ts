@@ -10,33 +10,141 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BeallitasokRouteImport } from './routes/beallitasok'
+import { Route as EllenorzesRouteImport } from './routes/ellenorzes'
+import { Route as SablonokRouteImport } from './routes/sablonok'
+import { Route as SzabalyokRouteImport } from './routes/szabalyok'
+import { Route as SzotarRouteImport } from './routes/szotar'
+import { Route as UjRouteImport } from './routes/uj'
+import { Route as TermekekIndexRouteImport } from './routes/termekek.index'
+import { Route as TermekekIdRouteImport } from './routes/termekek.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BeallitasokRoute = BeallitasokRouteImport.update({
+  id: '/beallitasok',
+  path: '/beallitasok',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EllenorzesRoute = EllenorzesRouteImport.update({
+  id: '/ellenorzes',
+  path: '/ellenorzes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SablonokRoute = SablonokRouteImport.update({
+  id: '/sablonok',
+  path: '/sablonok',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SzabalyokRoute = SzabalyokRouteImport.update({
+  id: '/szabalyok',
+  path: '/szabalyok',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SzotarRoute = SzotarRouteImport.update({
+  id: '/szotar',
+  path: '/szotar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UjRoute = UjRouteImport.update({
+  id: '/uj',
+  path: '/uj',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermekekIndexRoute = TermekekIndexRouteImport.update({
+  id: '/termekek/',
+  path: '/termekek/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermekekIdRoute = TermekekIdRouteImport.update({
+  id: '/termekek/$id',
+  path: '/termekek/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/beallitasok': typeof BeallitasokRoute
+  '/ellenorzes': typeof EllenorzesRoute
+  '/sablonok': typeof SablonokRoute
+  '/szabalyok': typeof SzabalyokRoute
+  '/szotar': typeof SzotarRoute
+  '/uj': typeof UjRoute
+  '/termekek/$id': typeof TermekekIdRoute
+  '/termekek/': typeof TermekekIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/beallitasok': typeof BeallitasokRoute
+  '/ellenorzes': typeof EllenorzesRoute
+  '/sablonok': typeof SablonokRoute
+  '/szabalyok': typeof SzabalyokRoute
+  '/szotar': typeof SzotarRoute
+  '/uj': typeof UjRoute
+  '/termekek/$id': typeof TermekekIdRoute
+  '/termekek': typeof TermekekIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/beallitasok': typeof BeallitasokRoute
+  '/ellenorzes': typeof EllenorzesRoute
+  '/sablonok': typeof SablonokRoute
+  '/szabalyok': typeof SzabalyokRoute
+  '/szotar': typeof SzotarRoute
+  '/uj': typeof UjRoute
+  '/termekek/$id': typeof TermekekIdRoute
+  '/termekek/': typeof TermekekIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/beallitasok'
+    | '/ellenorzes'
+    | '/sablonok'
+    | '/szabalyok'
+    | '/szotar'
+    | '/uj'
+    | '/termekek/$id'
+    | '/termekek/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/beallitasok'
+    | '/ellenorzes'
+    | '/sablonok'
+    | '/szabalyok'
+    | '/szotar'
+    | '/uj'
+    | '/termekek/$id'
+    | '/termekek'
+  id:
+    | '__root__'
+    | '/'
+    | '/beallitasok'
+    | '/ellenorzes'
+    | '/sablonok'
+    | '/szabalyok'
+    | '/szotar'
+    | '/uj'
+    | '/termekek/$id'
+    | '/termekek/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BeallitasokRoute: typeof BeallitasokRoute
+  EllenorzesRoute: typeof EllenorzesRoute
+  SablonokRoute: typeof SablonokRoute
+  SzabalyokRoute: typeof SzabalyokRoute
+  SzotarRoute: typeof SzotarRoute
+  UjRoute: typeof UjRoute
+  TermekekIdRoute: typeof TermekekIdRoute
+  TermekekIndexRoute: typeof TermekekIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +156,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/beallitasok': {
+      id: '/beallitasok'
+      path: '/beallitasok'
+      fullPath: '/beallitasok'
+      preLoaderRoute: typeof BeallitasokRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ellenorzes': {
+      id: '/ellenorzes'
+      path: '/ellenorzes'
+      fullPath: '/ellenorzes'
+      preLoaderRoute: typeof EllenorzesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sablonok': {
+      id: '/sablonok'
+      path: '/sablonok'
+      fullPath: '/sablonok'
+      preLoaderRoute: typeof SablonokRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/szabalyok': {
+      id: '/szabalyok'
+      path: '/szabalyok'
+      fullPath: '/szabalyok'
+      preLoaderRoute: typeof SzabalyokRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/szotar': {
+      id: '/szotar'
+      path: '/szotar'
+      fullPath: '/szotar'
+      preLoaderRoute: typeof SzotarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uj': {
+      id: '/uj'
+      path: '/uj'
+      fullPath: '/uj'
+      preLoaderRoute: typeof UjRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termekek/': {
+      id: '/termekek/'
+      path: '/termekek'
+      fullPath: '/termekek/'
+      preLoaderRoute: typeof TermekekIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termekek/$id': {
+      id: '/termekek/$id'
+      path: '/termekek/$id'
+      fullPath: '/termekek/$id'
+      preLoaderRoute: typeof TermekekIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BeallitasokRoute: BeallitasokRoute,
+  EllenorzesRoute: EllenorzesRoute,
+  SablonokRoute: SablonokRoute,
+  SzabalyokRoute: SzabalyokRoute,
+  SzotarRoute: SzotarRoute,
+  UjRoute: UjRoute,
+  TermekekIdRoute: TermekekIdRoute,
+  TermekekIndexRoute: TermekekIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
