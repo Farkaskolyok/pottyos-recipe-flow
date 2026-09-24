@@ -34,7 +34,7 @@ function realProduct(name = "Valós Túrókrém") {
     [],
     "Kovács",
   );
-  p.overrides.productName = { value: name, by: "Kovács", at: "2026-01-01" };
+  p.overrides.productName = { value: name, by: "Kovács", at: "2026-01-01", previous: "" };
   return p;
 }
 function state(demoMode: boolean, extra: State["products"] = []): State {

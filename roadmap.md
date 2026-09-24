@@ -32,3 +32,4 @@
 - [x] CI workflow (lint, test:run, build)
 - [ ] Open generated files in Microsoft Word (user) ; full manual E2E with real PDF/DOCX/DOC files (user)
 - [ ] Offline start of the app itself needs PWA packaging (still open)
+- [x] Demó mód / Éles teszt switch (isDemo records, hidden demo UI, no demo seeding in live, tests)
