@@ -61,7 +61,7 @@ export const aiAnalyze = createServerFn({ method: "POST" })
           },
         },
       });
-      const out = await result.experimental_output;
+      const out = Out.parse(JSON.parse(await result.text));
       return { ok: true, results: out.results, noise: out.noise };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

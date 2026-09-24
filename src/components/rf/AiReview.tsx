@@ -53,9 +53,15 @@ export function AiReview({
     });
 
   async function analyse() {
-    if (!navigator.onLine) return toast.error("Nincs internetkapcsolat.");
+    if (!navigator.onLine) {
+      toast.error("Nincs internetkapcsolat.");
+      return;
+    }
     const snippets = collectSnippets(p);
-    if (!snippets.length) return toast.info("Nincs elemezhető szövegrészlet.");
+    if (!snippets.length) {
+      toast.info("Nincs elemezhető szövegrészlet.");
+      return;
+    }
     setBusy(true);
     try {
       const r = await run({
