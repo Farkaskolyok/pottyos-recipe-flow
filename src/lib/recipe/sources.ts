@@ -1,4 +1,4 @@
-import { loadFileBlob, saveFileBlob } from "@/lib/idb";
+import { deleteFileBlob, loadFileBlob, saveFileBlob } from "@/lib/idb";
 // Multi-file product package: recipe + supplier / raw material specifications + historical references.
 // All extraction is deterministic and runs in the browser. No file content leaves the device.
 import * as XLSX from "xlsx";
@@ -80,6 +80,8 @@ export interface SourceFile {
   linkRow?: number; // recipe ingredient row
   linkState: LinkState;
   linkScore?: number;
+  /** Only partly readable (legacy .doc without local converter) – requires manual review. */
+  partial?: boolean;
   demo?: boolean;
 }
 
@@ -96,6 +98,17 @@ export async function persistSourceFile(id: string, file: File) {
   } catch {
     /* storage full or unavailable – file stays available for this session */
   }
+}
+/** Deletes a stored original (file removed before processing, or product deleted). */
+export async function deleteSourceFile(id: string) {
+  SESSION_FILES.delete(id);
+  await deleteFileBlob(id).catch(() => {});
+}
+/** Storage key of the product's main recipe XLS/XLSX. */
+export const recipeFileId = (productId: string) => `recipe:${productId}`;
+/** All stored blob ids belonging to a product (recipe + specifications + references). */
+export function productFileIds(p: { id: string; files?: { id: string }[] }) {
+  return [recipeFileId(p.id), ...(p.files ?? []).map((f) => f.id)];
 }
 export async function getSourceBlob(fileId: string): Promise<{ blob: Blob; name: string } | null> {
   const f = SESSION_FILES.get(fileId);
@@ -609,7 +622,6 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     else if (ext === "docx") blocks = await docxBlocks(buf);
     else if (ext === "xls" || ext === "xlsx") blocks = sheetBlocks(buf);
     let legacyPartial = false;
-    void legacyPartial;
     if (ext === "doc") {
       const converted = await convertLegacyDocLocally(buf);
       if (converted) {
@@ -637,7 +649,11 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     const x = extractFromBlocks(blocks);
     Object.assign(sf, x);
     sf.detectedMaterial = x.fields.find((f) => f.key === "product_description")?.value;
-    if (ext === "doc") sf.status = "review";
+    // Best-effort byte scanning of legacy .doc can NEVER make the file validated.
+    if (ext === "doc" && legacyPartial) {
+      sf.status = "review";
+      sf.partial = true;
+    } else if (ext === "doc") sf.status = "review";
     if (x.fields.length < 2) {
       sf.status = "review";
       sf.warnings.push("Kevés adat azonosítható automatikusan.");
