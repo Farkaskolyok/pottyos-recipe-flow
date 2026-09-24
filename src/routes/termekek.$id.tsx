@@ -75,6 +75,7 @@ function bump(p: Product, note: string): Product {
 }
 
 function ProductPage() {
+  const navigate = useNavigate();
   const { id } = Route.useParams();
   const store = useStore();
   const p = store.getProduct(id);
