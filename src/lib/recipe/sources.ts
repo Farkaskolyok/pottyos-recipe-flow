@@ -1,3 +1,4 @@
+import { loadFileBlob, saveFileBlob } from "@/lib/idb";
 // Multi-file product package: recipe + supplier / raw material specifications + historical references.
 // All extraction is deterministic and runs in the browser. No file content leaves the device.
 import * as XLSX from "xlsx";
@@ -56,7 +57,12 @@ export interface UnknownItem {
   id: string;
   text: string;
   page?: number;
-  decision?: { action: "field" | "newField" | "note" | "ignore"; target?: string; by: string; at: string };
+  decision?: {
+    action: "field" | "newField" | "note" | "ignore";
+    target?: string;
+    by: string;
+    at: string;
+  };
 }
 
 export interface SourceFile {
@@ -77,27 +83,84 @@ export interface SourceFile {
   demo?: boolean;
 }
 
-/* ---------------- local session file cache (for "Forrás megnyitása") ---------------- */
+/* ---------------- persistent local file storage (IndexedDB, for "Forrás megnyitása") ---------------- */
 const SESSION_FILES = new Map<string, File>();
 export function sessionFile(id: string) {
   return SESSION_FILES.get(id);
 }
-export function openSource(fileId: string | undefined, page?: number): boolean {
-  const f = fileId ? SESSION_FILES.get(fileId) : undefined;
-  if (!f) return false;
-  const url = URL.createObjectURL(f) + (page && /\.pdf$/i.test(f.name) ? `#page=${page}` : "");
-  window.open(url, "_blank", "noopener");
+/** Stores the original file on this device so it can be reopened after reload/restart. */
+export async function persistSourceFile(id: string, file: File) {
+  SESSION_FILES.set(id, file);
+  try {
+    await saveFileBlob(id, file, file.name);
+  } catch {
+    /* storage full or unavailable – file stays available for this session */
+  }
+}
+export async function getSourceBlob(fileId: string): Promise<{ blob: Blob; name: string } | null> {
+  const f = SESSION_FILES.get(fileId);
+  if (f) return { blob: f, name: f.name };
+  const rec = await loadFileBlob(fileId).catch(() => undefined);
+  return rec ? { blob: rec.blob, name: rec.name } : null;
+}
+/** Fictional demo specifications have no real file: store a small local text original so "Forrás megnyitása" works. */
+export async function ensureDemoSourceBlobs(files: SourceFile[]) {
+  for (const f of files) {
+    if (!f.demo) continue;
+    const have = await loadFileBlob(f.id).catch(() => undefined);
+    if (have) continue;
+    const lines = [
+      `${f.name}`,
+      "FIKTÍV DEMÓ SPECIFIKÁCIÓ – nem valós adat",
+      "",
+      ...f.fields.map((x) => `${x.page ? `[${x.page}. oldal] ` : ""}${x.label}: ${x.value}`),
+    ];
+    await saveFileBlob(
+      f.id,
+      new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }),
+      f.name,
+    ).catch(() => {});
+  }
+}
+/** Opens the locally stored original. Returns false when it is not stored on this device. */
+export async function openSource(fileId: string | undefined, page?: number): Promise<boolean> {
+  if (!fileId) return false;
+  const win = window.open("", "_blank");
+  const got = await getSourceBlob(fileId);
+  if (!got) {
+    win?.close();
+    return false;
+  }
+  const url =
+    URL.createObjectURL(got.blob) + (page && /\.pdf$/i.test(got.name) ? `#page=${page}` : "");
+  if (win) win.location.href = url;
+  else window.open(url, "_blank");
   return true;
 }
 
 /* ---------------- local regulatory library ---------------- */
-export const REGULATORY_LIBRARY: Record<string, { title: string; status: RegStatus; reviewedAt: string }> = {
-  "1169/2011/EU": { title: "Fogyasztók élelmiszer-információval való ellátása", status: "ok", reviewedAt: "2026-01-15" },
-  "1935/2004/EK": { title: "Élelmiszerrel érintkezésbe kerülő anyagok", status: "ok", reviewedAt: "2026-01-15" },
+export const REGULATORY_LIBRARY: Record<
+  string,
+  { title: string; status: RegStatus; reviewedAt: string }
+> = {
+  "1169/2011/EU": {
+    title: "Fogyasztók élelmiszer-információval való ellátása",
+    status: "ok",
+    reviewedAt: "2026-01-15",
+  },
+  "1935/2004/EK": {
+    title: "Élelmiszerrel érintkezésbe kerülő anyagok",
+    status: "ok",
+    reviewedAt: "2026-01-15",
+  },
 };
 
 export function normRegId(s: string) {
-  return s.replace(/\s/g, "").replace(/\/(EC|CE)$/i, "/EK").replace(/\/(EEC|EGK)$/i, "/EGK").replace(/\/eu$/i, "/EU");
+  return s
+    .replace(/\s/g, "")
+    .replace(/\/(EC|CE)$/i, "/EK")
+    .replace(/\/(EEC|EGK)$/i, "/EGK")
+    .replace(/\/eu$/i, "/EU");
 }
 
 /* ---------------- text extraction (local) ---------------- */
@@ -146,8 +209,15 @@ async function docxBlocks(buf: ArrayBuffer): Promise<Block[]> {
   let page = 1;
   for (const p of xml.split(/<\/w:p>/)) {
     if (/w:type="page"|lastRenderedPageBreak/.test(p)) page++;
-    const t = [...p.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>|<w:tab\/>/g)].map((m) => (m[1] === undefined ? "\t" : m[1])).join("");
-    const text = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').trim();
+    const t = [...p.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>|<w:tab\/>/g)]
+      .map((m) => (m[1] === undefined ? "\t" : m[1]))
+      .join("");
+    const text = t
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .trim();
     if (text) out.push({ text, page });
   }
   return out;
@@ -169,7 +239,12 @@ export async function convertLegacyDocLocally(buf: ArrayBuffer): Promise<ArrayBu
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 1500);
   try {
-    const r = await fetch(`${base}/convert`, { method: "POST", body: buf, signal: ctl.signal, headers: { "Content-Type": "application/msword" } });
+    const r = await fetch(`${base}/convert`, {
+      method: "POST",
+      body: buf,
+      signal: ctl.signal,
+      headers: { "Content-Type": "application/msword" },
+    });
     if (!r.ok) return null;
     const out = await r.arrayBuffer();
     return new Uint8Array(out.slice(0, 2)).join() === "80,75" ? out : null; // ZIP signature
@@ -204,41 +279,159 @@ function sheetBlocks(buf: ArrayBuffer): Block[] {
   const wb = XLSX.read(buf, { type: "array" });
   const out: Block[] = [];
   for (const s of wb.SheetNames) {
-    const grid = XLSX.utils.sheet_to_json(wb.Sheets[s], { header: 1, raw: false, defval: "" }) as string[][];
+    const grid = XLSX.utils.sheet_to_json(wb.Sheets[s], {
+      header: 1,
+      raw: false,
+      defval: "",
+    }) as string[][];
     grid.forEach((row, r) => {
       const cells = row.map((c) => String(c ?? "").trim());
       const first = cells.findIndex(Boolean);
       if (first < 0) return;
-      out.push({ text: cells.filter(Boolean).join(": "), sheet: s, cell: `${XLSX.utils.encode_col(first)}${r + 1}` });
+      out.push({
+        text: cells.filter(Boolean).join(": "),
+        sheet: s,
+        cell: `${XLSX.utils.encode_col(first)}${r + 1}`,
+      });
     });
   }
   return out;
 }
 
 /* ---------------- deterministic field recognition ---------------- */
-const FIELD_LABELS: { key: string; label: string; aliases: string[]; outputs: ExtractedField["outputs"] }[] = [
-  { key: "product_description", label: "Termékmegnevezés", aliases: ["product name", "product description", "termek neve", "termeknev", "megnevezes", "trade name", "kereskedelmi nev"], outputs: ["internal"] },
-  { key: "supplier", label: "Beszállító", aliases: ["supplier", "beszallito", "szallito"], outputs: ["internal"] },
-  { key: "manufacturer", label: "Gyártó", aliases: ["manufacturer", "producer", "gyarto", "eloallito"], outputs: ["internal"] },
+const FIELD_LABELS: {
+  key: string;
+  label: string;
+  aliases: string[];
+  outputs: ExtractedField["outputs"];
+}[] = [
+  {
+    key: "product_description",
+    label: "Termékmegnevezés",
+    aliases: [
+      "product name",
+      "product description",
+      "termek neve",
+      "termeknev",
+      "megnevezes",
+      "trade name",
+      "kereskedelmi nev",
+    ],
+    outputs: ["internal"],
+  },
+  {
+    key: "supplier",
+    label: "Beszállító",
+    aliases: ["supplier", "beszallito", "szallito"],
+    outputs: ["internal"],
+  },
+  {
+    key: "manufacturer",
+    label: "Gyártó",
+    aliases: ["manufacturer", "producer", "gyarto", "eloallito"],
+    outputs: ["internal"],
+  },
   { key: "address", label: "Cím", aliases: ["address", "cim"], outputs: ["internal"] },
-  { key: "telephone", label: "Telefon", aliases: ["telephone", "phone", "tel", "telefon"], outputs: ["internal"] },
+  {
+    key: "telephone",
+    label: "Telefon",
+    aliases: ["telephone", "phone", "tel", "telefon"],
+    outputs: ["internal"],
+  },
   { key: "email", label: "E-mail", aliases: ["email", "e mail"], outputs: ["internal"] },
-  { key: "contact", label: "Kapcsolattartó", aliases: ["contact person", "contact", "kapcsolattarto"], outputs: ["internal"] },
-  { key: "origin", label: "Származási hely", aliases: ["country of origin", "origin", "szarmazasi hely", "szarmazas"], outputs: ["spec"] },
-  { key: "recommended_use", label: "Javasolt felhasználás", aliases: ["recommended use", "intended use", "felhasznalas"], outputs: ["internal"] },
-  { key: "composition", label: "Összetétel", aliases: ["ingredients", "composition", "osszetetel", "osszetevok"], outputs: ["sheet", "spec"] },
-  { key: "allergens", label: "Allergének", aliases: ["allergens", "allergen", "allergenek"], outputs: ["sheet", "spec", "pack"] },
-  { key: "primary_packaging", label: "Elsődleges csomagolás", aliases: ["primary packaging", "elsodleges csomagolas"], outputs: ["spec"] },
-  { key: "secondary_packaging", label: "Másodlagos csomagolás", aliases: ["secondary packaging", "masodlagos csomagolas"], outputs: ["spec"] },
-  { key: "transport_packaging", label: "Szállítási csomagolás", aliases: ["transport packaging", "szallitasi csomagolas"], outputs: ["spec"] },
-  { key: "packaging", label: "Csomagolás", aliases: ["packaging", "csomagolas"], outputs: ["spec"] },
-  { key: "storage_conditions", label: "Tárolási feltételek", aliases: ["storage conditions", "storage", "tarolasi feltetelek", "tarolasi homerseklet", "raktarozasi homerseklet", "tarolas"], outputs: ["sheet", "spec"] },
-  { key: "transport_conditions", label: "Szállítási feltételek", aliases: ["transport conditions", "transport", "szallitasi feltetelek", "szallitas"], outputs: ["sheet", "spec"] },
-  { key: "shelf_life", label: "Minőségmegőrzési idő", aliases: ["best before time", "best before", "shelf life", "minosegmegorzesi ido", "eltarthatosag", "minosegmegorzes"], outputs: ["sheet", "spec"] },
+  {
+    key: "contact",
+    label: "Kapcsolattartó",
+    aliases: ["contact person", "contact", "kapcsolattarto"],
+    outputs: ["internal"],
+  },
+  {
+    key: "origin",
+    label: "Származási hely",
+    aliases: ["country of origin", "origin", "szarmazasi hely", "szarmazas"],
+    outputs: ["spec"],
+  },
+  {
+    key: "recommended_use",
+    label: "Javasolt felhasználás",
+    aliases: ["recommended use", "intended use", "felhasznalas"],
+    outputs: ["internal"],
+  },
+  {
+    key: "composition",
+    label: "Összetétel",
+    aliases: ["ingredients", "composition", "osszetetel", "osszetevok"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "allergens",
+    label: "Allergének",
+    aliases: ["allergens", "allergen", "allergenek"],
+    outputs: ["sheet", "spec", "pack"],
+  },
+  {
+    key: "primary_packaging",
+    label: "Elsődleges csomagolás",
+    aliases: ["primary packaging", "elsodleges csomagolas"],
+    outputs: ["spec"],
+  },
+  {
+    key: "secondary_packaging",
+    label: "Másodlagos csomagolás",
+    aliases: ["secondary packaging", "masodlagos csomagolas"],
+    outputs: ["spec"],
+  },
+  {
+    key: "transport_packaging",
+    label: "Szállítási csomagolás",
+    aliases: ["transport packaging", "szallitasi csomagolas"],
+    outputs: ["spec"],
+  },
+  {
+    key: "packaging",
+    label: "Csomagolás",
+    aliases: ["packaging", "csomagolas"],
+    outputs: ["spec"],
+  },
+  {
+    key: "storage_conditions",
+    label: "Tárolási feltételek",
+    aliases: [
+      "storage conditions",
+      "storage",
+      "tarolasi feltetelek",
+      "tarolasi homerseklet",
+      "raktarozasi homerseklet",
+      "tarolas",
+    ],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "transport_conditions",
+    label: "Szállítási feltételek",
+    aliases: ["transport conditions", "transport", "szallitasi feltetelek", "szallitas"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "shelf_life",
+    label: "Minőségmegőrzési idő",
+    aliases: [
+      "best before time",
+      "best before",
+      "shelf life",
+      "minosegmegorzesi ido",
+      "eltarthatosag",
+      "minosegmegorzes",
+    ],
+    outputs: ["sheet", "spec"],
+  },
 ];
 
 const NUTRIENT_ALIASES: [NutrientKey, string[]][] = [
-  ["saturates", ["of which saturates", "saturated fat", "saturates", "telitett zsirsav", "ebbol telitett"]],
+  [
+    "saturates",
+    ["of which saturates", "saturated fat", "saturates", "telitett zsirsav", "ebbol telitett"],
+  ],
   ["sugars", ["of which sugars", "sugars", "ebbol cukrok", "cukrok"]],
   ["energyKj", ["energy kj", "energia kj"]],
   ["fat", ["fat", "zsir"]],
@@ -250,11 +443,31 @@ const NUTRIENT_ALIASES: [NutrientKey, string[]][] = [
 
 const QUALITY_ALIASES: { key: string; label: string; unit: string; aliases: string[] }[] = [
   { key: "q.ph", label: "pH", unit: "", aliases: ["ph"] },
-  { key: "q.brix", label: "Oldható szárazanyag", unit: "°Bx", aliases: ["soluble solids", "brix", "oldhato szarazanyag"] },
-  { key: "q.density", label: "Sűrűség", unit: "kg/dm3", aliases: ["density", "consistency", "suruseg"] },
+  {
+    key: "q.brix",
+    label: "Oldható szárazanyag",
+    unit: "°Bx",
+    aliases: ["soluble solids", "brix", "oldhato szarazanyag"],
+  },
+  {
+    key: "q.density",
+    label: "Sűrűség",
+    unit: "kg/dm3",
+    aliases: ["density", "consistency", "suruseg"],
+  },
   { key: "q.moisture", label: "Nedvességtartalom", unit: "%", aliases: ["moisture", "nedvesseg"] },
-  { key: "q.tpc", label: "Összes csíraszám", unit: "CFU/g", aliases: ["total plate count", "tpc", "osszes csiraszam"] },
-  { key: "q.yeast", label: "Élesztő és penész", unit: "CFU/g", aliases: ["yeasts and moulds", "yeast", "eleszto"] },
+  {
+    key: "q.tpc",
+    label: "Összes csíraszám",
+    unit: "CFU/g",
+    aliases: ["total plate count", "tpc", "osszes csiraszam"],
+  },
+  {
+    key: "q.yeast",
+    label: "Élesztő és penész",
+    unit: "CFU/g",
+    aliases: ["yeasts and moulds", "yeast", "eleszto"],
+  },
 ];
 
 const NUM = /(-?\d+(?:[.,]\d+)?)/;
@@ -278,11 +491,20 @@ export function extractFromBlocks(blocks: Block[]) {
 
   for (const b of blocks) {
     // regulatory references
-    for (const m of b.text.matchAll(/\b(\d{2,4}\s?\/\s?\d{4}\s?\/\s?(?:EU|EK|EC|EGK|EEC|CE))\b|\((?:EU|EK|EC)\)\s?(?:No\.?|sz\.)?\s?(\d{2,4}\/\d{4})/gi)) {
+    for (const m of b.text.matchAll(
+      /\b(\d{2,4}\s?\/\s?\d{4}\s?\/\s?(?:EU|EK|EC|EGK|EEC|CE))\b|\((?:EU|EK|EC)\)\s?(?:No\.?|sz\.)?\s?(\d{2,4}\/\d{4})/gi,
+    )) {
       const idf = normRegId(m[1] ?? `${m[2]}/EU`);
       if (regulatory.some((r) => r.identifier === idf)) continue;
       const lib = REGULATORY_LIBRARY[idf];
-      regulatory.push({ id: uid(), identifier: idf, page: b.page, original: b.text.slice(0, 240), status: lib?.status ?? "review", reviewedAt: lib?.reviewedAt });
+      regulatory.push({
+        id: uid(),
+        identifier: idf,
+        page: b.page,
+        original: b.text.slice(0, 240),
+        status: lib?.status ?? "review",
+        reviewedAt: lib?.reviewedAt,
+      });
     }
     const h = norm(b.text.replace(/[:()]/g, " "));
     const lv = splitLabel(b.text);
@@ -296,7 +518,18 @@ export function extractFromBlocks(blocks: Block[]) {
         seen.add(q.key);
         const tol = rest.match(/(±\s?\d+(?:[.,]\d+)?\s?%?)/)?.[1]?.replace(/\s/g, "");
         const method = rest.match(/(?:method|módszer|mérés)\s*:?\s*([^;,]+)/i)?.[1]?.trim();
-        fields.push({ key: q.key, label: q.label, value: n[1].replace(".", ","), num: toN(n[1]), unit: q.unit, tolerance: tol, method, original: b.text, outputs: ["sheet", "spec"], ...loc(b) });
+        fields.push({
+          key: q.key,
+          label: q.label,
+          value: n[1].replace(".", ","),
+          num: toN(n[1]),
+          unit: q.unit,
+          tolerance: tol,
+          method,
+          original: b.text,
+          outputs: ["sheet", "spec"],
+          ...loc(b),
+        });
         continue;
       }
     }
@@ -306,7 +539,16 @@ export function extractFromBlocks(blocks: Block[]) {
       const n = rest.match(NUM);
       if (n) {
         seen.add(`n.${nu[0]}`);
-        fields.push({ key: `n.${nu[0]}`, label: NUTRIENT_LABELS[nu[0]], value: n[1].replace(".", ","), num: toN(n[1]), unit: nu[0].startsWith("energy") ? "kJ" : "g/100 g", original: b.text, outputs: ["internal"], ...loc(b) });
+        fields.push({
+          key: `n.${nu[0]}`,
+          label: NUTRIENT_LABELS[nu[0]],
+          value: n[1].replace(".", ","),
+          num: toN(n[1]),
+          unit: nu[0].startsWith("energy") ? "kJ" : "g/100 g",
+          original: b.text,
+          outputs: ["internal"],
+          ...loc(b),
+        });
         continue;
       }
     }
@@ -314,21 +556,34 @@ export function extractFromBlocks(blocks: Block[]) {
       const f = FIELD_LABELS.find((fl) => startsWithAlias(lh, fl.aliases));
       if (f && !seen.has(f.key)) {
         seen.add(f.key);
-        fields.push({ key: f.key, label: f.label, value: lv[1], original: b.text, outputs: f.outputs, ...loc(b) });
+        fields.push({
+          key: f.key,
+          label: f.label,
+          value: lv[1],
+          original: b.text,
+          outputs: f.outputs,
+          ...loc(b),
+        });
         continue;
       }
-      if (!f && unknown.length < 25 && lv[1].length > 2) unknown.push({ id: uid(), text: b.text.slice(0, 300), page: b.page });
+      if (!f && unknown.length < 25 && lv[1].length > 2)
+        unknown.push({ id: uid(), text: b.text.slice(0, 300), page: b.page });
     }
   }
   return { fields, regulatory, unknown };
 }
 
-export function detectSourceType(name: string, section: "recipe" | "spec" | "reference"): SourceType {
+export function detectSourceType(
+  name: string,
+  section: "recipe" | "spec" | "reference",
+): SourceType {
   if (section === "recipe") return "RECIPE";
   if (section === "reference") return "HISTORICAL_REFERENCE";
   const n = norm(name);
   if (/supplier|beszallito|szallito/.test(n)) return "SUPPLIER_SPECIFICATION";
-  return /spec|specifikacio|adatlap/.test(n) ? "SUPPLIER_SPECIFICATION" : "RAW_MATERIAL_SPECIFICATION";
+  return /spec|specifikacio|adatlap/.test(n)
+    ? "SUPPLIER_SPECIFICATION"
+    : "RAW_MATERIAL_SPECIFICATION";
 }
 
 export async function processFile(file: File, section: "spec" | "reference"): Promise<SourceFile> {
@@ -346,14 +601,15 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     unknown: [],
     linkState: "none",
   };
-  SESSION_FILES.set(sf.id, file);
+  await persistSourceFile(sf.id, file);
   try {
     const buf = await file.arrayBuffer();
     let blocks: Block[] = [];
     if (ext === "pdf") blocks = await pdfBlocks(buf);
     else if (ext === "docx") blocks = await docxBlocks(buf);
     else if (ext === "xls" || ext === "xlsx") blocks = sheetBlocks(buf);
-    let legacyPartial = false; void legacyPartial;
+    let legacyPartial = false;
+    void legacyPartial;
     if (ext === "doc") {
       const converted = await convertLegacyDocLocally(buf);
       if (converted) {
@@ -363,12 +619,19 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
         blocks = legacyDocBlocks(buf);
         legacyPartial = true;
         sf.warnings.push(LEGACY_DOC_WARNING);
-        sf.warnings.push("Helyi konverter nem érhető el: a szöveg csak részlegesen olvasható, a kinyert adatok nem tekinthetők ellenőrzöttnek.");
+        sf.warnings.push(
+          "A dokumentum csak részlegesen olvasható. A véglegesítés előtt ellenőrzés szükséges.",
+        );
       }
-    } else if (!(ext === "pdf" || ext === "docx" || ext === "xls" || ext === "xlsx")) throw new Error("unsupported");
+    } else if (!(ext === "pdf" || ext === "docx" || ext === "xls" || ext === "xlsx"))
+      throw new Error("unsupported");
     if (!blocks.length) {
       sf.status = "unreadable";
-      sf.warnings.push(ext === "pdf" ? "Nem található szöveg (valószínűleg szkennelt PDF)." : "Nem található olvasható szöveg.");
+      sf.warnings.push(
+        ext === "pdf"
+          ? "Nem található szöveg (valószínűleg szkennelt PDF)."
+          : "Nem található olvasható szöveg.",
+      );
       return sf;
     }
     const x = extractFromBlocks(blocks);
@@ -387,9 +650,29 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
 }
 
 /* ---------------- raw material linking ---------------- */
-const STOP = new Set(["specification", "specifikacio", "spec", "demo", "pdf", "doc", "docx", "xls", "xlsx", "the", "and", "es", "powder", "ltd", "kft"]);
+const STOP = new Set([
+  "specification",
+  "specifikacio",
+  "spec",
+  "demo",
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "the",
+  "and",
+  "es",
+  "powder",
+  "ltd",
+  "kft",
+]);
 function tokens(s: string) {
-  return new Set(norm(s).split(/[^a-z0-9]+/).filter((t) => t.length > 2 && !STOP.has(t)));
+  return new Set(
+    norm(s)
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length > 2 && !STOP.has(t)),
+  );
 }
 export function suggestLink(sf: SourceFile, ingredients: { row: number; name: string }[]) {
   const a = new Set([...tokens(sf.name), ...tokens(sf.detectedMaterial ?? "")]);
@@ -398,19 +681,37 @@ export function suggestLink(sf: SourceFile, ingredients: { row: number; name: st
     const b = tokens(i.name);
     if (!b.size) continue;
     let hit = 0;
-    for (const t of b) if ([...a].some((x) => x === t || (t.length > 4 && (x.startsWith(t.slice(0, 5)) || t.startsWith(x.slice(0, 5)))))) hit++;
+    for (const t of b)
+      if (
+        [...a].some(
+          (x) =>
+            x === t ||
+            (t.length > 4 && (x.startsWith(t.slice(0, 5)) || t.startsWith(x.slice(0, 5)))),
+        )
+      )
+        hit++;
     const score = hit / b.size;
     if (score > best.score) best = { row: i.row, score };
   }
   return best;
 }
 
-export function applyLinkSuggestions(files: SourceFile[], ingredients: { row: number; name: string }[]) {
+export function applyLinkSuggestions(
+  files: SourceFile[],
+  ingredients: { row: number; name: string }[],
+) {
   return files.map((f) => {
-    if (f.sourceType === "RECIPE" || f.sourceType === "HISTORICAL_REFERENCE" || f.linkState !== "none") return f;
+    if (
+      f.sourceType === "RECIPE" ||
+      f.sourceType === "HISTORICAL_REFERENCE" ||
+      f.linkState !== "none"
+    )
+      return f;
     const s = suggestLink(f, ingredients);
-    if (s.score >= 0.99) return { ...f, linkRow: s.row, linkState: "linked" as const, linkScore: s.score };
-    if (s.score >= 0.3) return { ...f, linkRow: s.row, linkState: "suggested" as const, linkScore: s.score };
+    if (s.score >= 0.99)
+      return { ...f, linkRow: s.row, linkState: "linked" as const, linkScore: s.score };
+    if (s.score >= 0.3)
+      return { ...f, linkRow: s.row, linkState: "suggested" as const, linkScore: s.score };
     return f;
   });
 }
@@ -440,8 +741,22 @@ export function findConflicts(p: Product): Conflict[] {
       const k = fld.key.slice(2) as NutrientKey;
       const r = (ing.raw.nutrients as Record<string, number>)[k];
       if (r == null) continue;
-      if (Math.abs(r - fld.num) > 0.005 && Math.abs(r - fld.num) / Math.max(Math.abs(r), 0.01) > 0.02)
-        out.push({ id: `ing.${f.linkRow}.${k}`, row: f.linkRow, ingredient: ing.raw.name, nutrient: k, label: NUTRIENT_LABELS[k], recipe: r, spec: fld.num, file: f, field: fld, recipeCell: ing.raw.refs[k] });
+      if (
+        Math.abs(r - fld.num) > 0.005 &&
+        Math.abs(r - fld.num) / Math.max(Math.abs(r), 0.01) > 0.02
+      )
+        out.push({
+          id: `ing.${f.linkRow}.${k}`,
+          row: f.linkRow,
+          ingredient: ing.raw.name,
+          nutrient: k,
+          label: NUTRIENT_LABELS[k],
+          recipe: r,
+          spec: fld.num,
+          file: f,
+          field: fld,
+          recipeCell: ing.raw.refs[k],
+        });
     }
   }
   return out;
@@ -449,7 +764,17 @@ export function findConflicts(p: Product): Conflict[] {
 
 /* ---------------- demo package (fictional) ---------------- */
 export function demoSpecFiles(): SourceFile[] {
-  const f = (name: string, ext: string, type: SourceType, material: string, fields: Omit<ExtractedField, "original">[], reg: [string, number][], unknown: [string, number][] = [], status: FileStatus = "ok", warnings: string[] = []): SourceFile => ({
+  const f = (
+    name: string,
+    ext: string,
+    type: SourceType,
+    material: string,
+    fields: Omit<ExtractedField, "original">[],
+    reg: [string, number][],
+    unknown: [string, number][] = [],
+    status: FileStatus = "ok",
+    warnings: string[] = [],
+  ): SourceFile => ({
     id: uid(),
     name,
     size: 120_000 + name.length * 997,
@@ -458,44 +783,204 @@ export function demoSpecFiles(): SourceFile[] {
     status,
     warnings,
     detectedMaterial: material,
-    fields: ([{ key: "product_description", label: "Termékmegnevezés", value: material, page: 1, outputs: ["internal"] }] as Omit<ExtractedField, "original">[]).concat(fields).map((x) => ({ ...x, original: `${x.label}: ${x.value}${x.unit ? " " + x.unit : ""}${x.tolerance ? " " + x.tolerance : ""}` })),
+    fields: (
+      [
+        {
+          key: "product_description",
+          label: "Termékmegnevezés",
+          value: material,
+          page: 1,
+          outputs: ["internal"],
+        },
+      ] as Omit<ExtractedField, "original">[]
+    )
+      .concat(fields)
+      .map((x) => ({
+        ...x,
+        original: `${x.label}: ${x.value}${x.unit ? " " + x.unit : ""}${x.tolerance ? " " + x.tolerance : ""}`,
+      })),
     regulatory: reg.map(([idf, page]) => {
       const lib = REGULATORY_LIBRARY[idf];
-      return { id: uid(), identifier: idf, page, original: `Megfelel a(z) ${idf} rendelet előírásainak.`, status: lib?.status ?? "review", reviewedAt: lib?.reviewedAt };
+      return {
+        id: uid(),
+        identifier: idf,
+        page,
+        original: `Megfelel a(z) ${idf} rendelet előírásainak.`,
+        status: lib?.status ?? "review",
+        reviewedAt: lib?.reviewedAt,
+      };
     }),
     unknown: unknown.map(([text, page]) => ({ id: uid(), text, page })),
     linkState: "none",
     demo: true,
   });
   return [
-    f("Demo joghurtos fehér bevonó specifikáció.pdf", "pdf", "SUPPLIER_SPECIFICATION", "Joghurtos bevonómassza", [
-      { key: "supplier", label: "Beszállító", value: "Demo Bevonó Kft. (fiktív)", page: 1 },
-      { key: "origin", label: "Származási hely", value: "Magyarország", page: 1, outputs: ["spec"] },
-      { key: "storage_conditions", label: "Tárolási feltételek", value: "15–20 °C, száraz helyen", page: 2, outputs: ["sheet", "spec"] },
-      { key: "transport_conditions", label: "Szállítási feltételek", value: "max. 25 °C", page: 2, outputs: ["sheet", "spec"] },
-      { key: "shelf_life", label: "Minőségmegőrzési idő", value: "12 hónap", page: 2, outputs: ["sheet", "spec"] },
-      { key: "allergens", label: "Allergének", value: "tej", page: 2, outputs: ["sheet", "spec", "pack"] },
-      { key: "n.fat", label: "Zsír", value: "34,5", num: 34.5, unit: "g/100 g", page: 3 },
-      { key: "n.salt", label: "Só", value: "0,08", num: 0.08, unit: "g/100 g", page: 3 },
-    ], [["1169/2011/EU", 4], ["1935/2004/EK", 4]]),
-    f("Demo inulin HSI specification.pdf", "pdf", "RAW_MATERIAL_SPECIFICATION", "Inulin", [
-      { key: "manufacturer", label: "Gyártó", value: "Demo Fibre Ltd. (fiktív)", page: 1 },
-      { key: "origin", label: "Származási hely", value: "Belgium", page: 1, outputs: ["spec"] },
-      { key: "storage_conditions", label: "Tárolási feltételek", value: "hűvös, száraz helyen, max. 25 °C", page: 1, outputs: ["sheet", "spec"] },
-      { key: "q.moisture", label: "Nedvességtartalom", value: "4,5", num: 4.5, unit: "%", tolerance: "±0,5", method: "szárítószekrény", page: 2, outputs: ["sheet", "spec"] },
-    ], [["1169/2011/EU", 3]]),
-    f("Demo POWDER FLAVOUR specification.pdf", "pdf", "SUPPLIER_SPECIFICATION", "Natural raspberry powder flavour", [
-      { key: "supplier", label: "Beszállító", value: "Demo Aroma Bt. (fiktív)", page: 1 },
-      { key: "storage_conditions", label: "Tárolási feltételek", value: "10–20 °C, fénytől védve", page: 1, outputs: ["sheet", "spec"] },
-      { key: "shelf_life", label: "Minőségmegőrzési idő", value: "18 hónap", page: 1, outputs: ["sheet", "spec"] },
-    ], [["1169/2011/EU", 2], ["1334/2008/EK", 2]], [["Safety precautions: fine powder can cause dust explosion", 3]]),
-    f("Demo RASPBERRY-muesli specification.doc", "doc", "RAW_MATERIAL_SPECIFICATION", "Málna-müzli", [
-      { key: "supplier", label: "Beszállító", value: "Demo Müzli Zrt. (fiktív)", page: 1 },
-      { key: "composition", label: "Összetétel", value: "zabpehely, liofilizált málna, cukor", page: 1, outputs: ["sheet", "spec"] },
-      { key: "allergens", label: "Allergének", value: "zab (glutén)", page: 1, outputs: ["sheet", "spec", "pack"] },
-      { key: "q.ph", label: "pH", value: "3,7", num: 3.7, unit: "", tolerance: "±0,3", method: "pH-mérő", page: 4, outputs: ["sheet", "spec"] },
-      { key: "q.brix", label: "Oldható szárazanyag", value: "45,0", num: 45, unit: "°Bx", tolerance: "±2,0", method: "refraktométer", page: 4, outputs: ["sheet", "spec"] },
-      { key: "q.density", label: "Sűrűség", value: "1,25", num: 1.25, unit: "kg/dm3", tolerance: "±3%", method: "számított érték", page: 4, outputs: ["sheet", "spec"] },
-    ], [], [], "review", ["! Régi Word formátum – ellenőrzés szükséges"]),
+    f(
+      "Demo joghurtos fehér bevonó specifikáció.pdf",
+      "pdf",
+      "SUPPLIER_SPECIFICATION",
+      "Joghurtos bevonómassza",
+      [
+        { key: "supplier", label: "Beszállító", value: "Demo Bevonó Kft. (fiktív)", page: 1 },
+        {
+          key: "origin",
+          label: "Származási hely",
+          value: "Magyarország",
+          page: 1,
+          outputs: ["spec"],
+        },
+        {
+          key: "storage_conditions",
+          label: "Tárolási feltételek",
+          value: "15–20 °C, száraz helyen",
+          page: 2,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "transport_conditions",
+          label: "Szállítási feltételek",
+          value: "max. 25 °C",
+          page: 2,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "shelf_life",
+          label: "Minőségmegőrzési idő",
+          value: "12 hónap",
+          page: 2,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "allergens",
+          label: "Allergének",
+          value: "tej",
+          page: 2,
+          outputs: ["sheet", "spec", "pack"],
+        },
+        { key: "n.fat", label: "Zsír", value: "34,5", num: 34.5, unit: "g/100 g", page: 3 },
+        { key: "n.salt", label: "Só", value: "0,08", num: 0.08, unit: "g/100 g", page: 3 },
+      ],
+      [
+        ["1169/2011/EU", 4],
+        ["1935/2004/EK", 4],
+      ],
+    ),
+    f(
+      "Demo inulin HSI specification.pdf",
+      "pdf",
+      "RAW_MATERIAL_SPECIFICATION",
+      "Inulin",
+      [
+        { key: "manufacturer", label: "Gyártó", value: "Demo Fibre Ltd. (fiktív)", page: 1 },
+        { key: "origin", label: "Származási hely", value: "Belgium", page: 1, outputs: ["spec"] },
+        {
+          key: "storage_conditions",
+          label: "Tárolási feltételek",
+          value: "hűvös, száraz helyen, max. 25 °C",
+          page: 1,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "q.moisture",
+          label: "Nedvességtartalom",
+          value: "4,5",
+          num: 4.5,
+          unit: "%",
+          tolerance: "±0,5",
+          method: "szárítószekrény",
+          page: 2,
+          outputs: ["sheet", "spec"],
+        },
+      ],
+      [["1169/2011/EU", 3]],
+    ),
+    f(
+      "Demo POWDER FLAVOUR specification.pdf",
+      "pdf",
+      "SUPPLIER_SPECIFICATION",
+      "Natural raspberry powder flavour",
+      [
+        { key: "supplier", label: "Beszállító", value: "Demo Aroma Bt. (fiktív)", page: 1 },
+        {
+          key: "storage_conditions",
+          label: "Tárolási feltételek",
+          value: "10–20 °C, fénytől védve",
+          page: 1,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "shelf_life",
+          label: "Minőségmegőrzési idő",
+          value: "18 hónap",
+          page: 1,
+          outputs: ["sheet", "spec"],
+        },
+      ],
+      [
+        ["1169/2011/EU", 2],
+        ["1334/2008/EK", 2],
+      ],
+      [["Safety precautions: fine powder can cause dust explosion", 3]],
+    ),
+    f(
+      "Demo RASPBERRY-muesli specification.doc",
+      "doc",
+      "RAW_MATERIAL_SPECIFICATION",
+      "Málna-müzli",
+      [
+        { key: "supplier", label: "Beszállító", value: "Demo Müzli Zrt. (fiktív)", page: 1 },
+        {
+          key: "composition",
+          label: "Összetétel",
+          value: "zabpehely, liofilizált málna, cukor",
+          page: 1,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "allergens",
+          label: "Allergének",
+          value: "zab (glutén)",
+          page: 1,
+          outputs: ["sheet", "spec", "pack"],
+        },
+        {
+          key: "q.ph",
+          label: "pH",
+          value: "3,7",
+          num: 3.7,
+          unit: "",
+          tolerance: "±0,3",
+          method: "pH-mérő",
+          page: 4,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "q.brix",
+          label: "Oldható szárazanyag",
+          value: "45,0",
+          num: 45,
+          unit: "°Bx",
+          tolerance: "±2,0",
+          method: "refraktométer",
+          page: 4,
+          outputs: ["sheet", "spec"],
+        },
+        {
+          key: "q.density",
+          label: "Sűrűség",
+          value: "1,25",
+          num: 1.25,
+          unit: "kg/dm3",
+          tolerance: "±3%",
+          method: "számított érték",
+          page: 4,
+          outputs: ["sheet", "spec"],
+        },
+      ],
+      [],
+      [],
+      "review",
+      ["! Régi Word formátum – ellenőrzés szükséges"],
+    ),
   ];
 }

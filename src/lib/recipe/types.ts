@@ -128,7 +128,10 @@ export interface Product {
   raw: RawRecipe;
   ingredients: ResolvedIngredient[];
   /** manual overrides keyed by field id */
-  overrides: Record<string, { value: string; by: string; at: string; note?: string; previous: string }>;
+  overrides: Record<
+    string,
+    { value: string; by: string; at: string; note?: string; previous: string }
+  >;
   ingredientTextOverride?: string;
   ingredientTextMeta?: { by: string; at: string; previous: string };
   regulatoryAck?: Record<string, { by: string; at: string }>;
@@ -136,6 +139,9 @@ export interface Product {
   /** Multi-file product package (recipe + specifications + references). Content is never stored, only extracted data. */
   files?: import("./sources").SourceFile[];
   /** Conflict decisions keyed by conflict id */
-  conflictDecisions?: Record<string, { choice: "recipe" | "spec" | "manual"; value: number; by: string; at: string }>;
+  conflictDecisions?: Record<
+    string,
+    { choice: "recipe" | "spec" | "manual"; value: number; by: string; at: string }
+  >;
   audit?: { at: string; by: string; text: string }[];
 }

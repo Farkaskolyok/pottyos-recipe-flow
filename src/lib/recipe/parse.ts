@@ -34,7 +34,13 @@ export const IMPORT_TEMPLATES: ImportTemplate[] = [
     },
     meta: {
       productName: ["product name", "termek neve", "termeknev", "termek"],
-      productWeight: ["product weight", "termektomeg", "netto tomeg", "net weight", "termek tomeg g"],
+      productWeight: [
+        "product weight",
+        "termektomeg",
+        "netto tomeg",
+        "net weight",
+        "termek tomeg g",
+      ],
       servingSize: ["serving size", "adag", "adagmeret"],
       packaging: ["packaging", "csomagolas"],
       losses: ["losses", "veszteseg", "gyartasi veszteseg"],
@@ -52,7 +58,10 @@ function sheetGrid(ws: XLSX.WorkSheet): Grid {
 function toNum(v: unknown): number | null {
   if (typeof v === "number") return v;
   if (typeof v === "string") {
-    const t = v.replace(/\s/g, "").replace(",", ".").replace(/[^0-9.\-]/g, "");
+    const t = v
+      .replace(/\s/g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.-]/g, "");
     if (t === "" || t === "-" || t === ".") return null;
     const n = Number(t);
     return Number.isFinite(n) ? n : null;
@@ -92,11 +101,16 @@ export async function readWorkbook(file: File) {
 export function parseWorkbook(wb: XLSX.WorkBook, fileName: string, fileSize: number): RawRecipe {
   const tpl = IMPORT_TEMPLATES[0];
   // pick sheet with the best header match
-  let chosen = { sheet: wb.SheetNames[0], grid: [] as Grid, header: { row: -1, map: {} as Record<string, number> } };
+  let chosen = {
+    sheet: wb.SheetNames[0],
+    grid: [] as Grid,
+    header: { row: -1, map: {} as Record<string, number> },
+  };
   for (const s of wb.SheetNames) {
     const grid = sheetGrid(wb.Sheets[s]);
     const header = findHeader(grid, tpl);
-    if (Object.keys(header.map).length > Object.keys(chosen.header.map).length) chosen = { sheet: s, grid, header };
+    if (Object.keys(header.map).length > Object.keys(chosen.header.map).length)
+      chosen = { sheet: s, grid, header };
   }
   const { grid, header, sheet } = chosen;
   const cols = header.map;
@@ -141,8 +155,12 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileName: string, fileSize: num
       ingredients.push({
         row: r + 1,
         name: name.trim(),
-        code: cols.code !== undefined && row[cols.code] != null ? String(row[cols.code]) : undefined,
-        producer: cols.producer !== undefined && row[cols.producer] != null ? String(row[cols.producer]) : undefined,
+        code:
+          cols.code !== undefined && row[cols.code] != null ? String(row[cols.code]) : undefined,
+        producer:
+          cols.producer !== undefined && row[cols.producer] != null
+            ? String(row[cols.producer])
+            : undefined,
         quantity: cols.quantity !== undefined ? toNum(row[cols.quantity]) : null,
         nutrients,
         refs,
@@ -150,7 +168,8 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileName: string, fileSize: num
     }
   }
 
-  const confident = cols.name !== undefined && cols.quantity !== undefined && Object.keys(cols).length >= 5;
+  const confident =
+    cols.name !== undefined && cols.quantity !== undefined && Object.keys(cols).length >= 5;
   return {
     fileName,
     fileSize,

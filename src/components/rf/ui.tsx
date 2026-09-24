@@ -19,7 +19,11 @@ export function StatusPill({ status }: { status: ProductStatus }) {
     approved: "bg-success-soft text-success",
     archived: "bg-secondary text-muted-foreground",
   }[status];
-  return <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>{PRODUCT_STATUS[status]}</span>;
+  return (
+    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>
+      {PRODUCT_STATUS[status]}
+    </span>
+  );
 }
 
 export function LevelIcon({ level, className }: { level: CheckLevel; className?: string }) {
@@ -29,7 +33,13 @@ export function LevelIcon({ level, className }: { level: CheckLevel; className?:
     error: { I: X, c: "bg-danger-soft text-destructive" },
   }[level];
   return (
-    <span className={cn("inline-flex size-7 shrink-0 items-center justify-center rounded-full", map.c, className)}>
+    <span
+      className={cn(
+        "inline-flex size-7 shrink-0 items-center justify-center rounded-full",
+        map.c,
+        className,
+      )}
+    >
       <map.I className="size-4" strokeWidth={2.5} />
     </span>
   );
@@ -41,16 +51,28 @@ export function MatchPill({ status }: { status: MatchStatus }) {
     review: ["Ellenőrizendő", "bg-warning-soft text-foreground"],
     unknown: ["Ismeretlen", "bg-danger-soft text-destructive"],
   }[status];
-  return <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", m[1])}>{m[0]}</span>;
+  return (
+    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", m[1])}>
+      {m[0]}
+    </span>
+  );
 }
 
 export function OriginTag({ origin }: { origin: Origin }) {
-  const m = { source: "Forrás", calculated: "Számított", manual: "Manuális", company: "Céges fix", regulatory: "Jogszabályi" }[origin];
+  const m = {
+    source: "Forrás",
+    calculated: "Számított",
+    manual: "Manuális",
+    company: "Céges fix",
+    regulatory: "Jogszabályi",
+  }[origin];
   return (
     <span
       className={cn(
         "inline-flex rounded-md border px-1.5 py-px text-[11px] font-medium",
-        origin === "manual" ? "border-primary/40 text-primary" : "border-border text-muted-foreground",
+        origin === "manual"
+          ? "border-primary/40 text-primary"
+          : "border-border text-muted-foreground",
       )}
     >
       {m}
@@ -58,7 +80,15 @@ export function OriginTag({ origin }: { origin: Origin }) {
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -71,7 +101,11 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 }
 
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]", className)}>{children}</div>;
+  return (
+    <div className={cn("rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]", className)}>
+      {children}
+    </div>
+  );
 }
 
 export function DesktopHint() {

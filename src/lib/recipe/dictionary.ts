@@ -3,10 +3,54 @@ import { norm } from "./format";
 
 // Fictional demo dictionary. No real recipe data.
 export const DEMO_DICTIONARY: DictionaryEntry[] = [
-  { id: "d-joghurtbev", technicalName: "Joghurtos bevonómassza", aliases: ["JOGHURT_BEV"], canonicalName: "joghurtos fehér bevonómassza", packagingName: "joghurtos fehér bevonómassza", materialCode: "DM-2050", manufacturer: "Demo Bevonó Kft.", allergen: "tej", group: "Bevonó", subIngredients: "cukor, növényi zsír, joghurtpor, emulgeálószer: napraforgó-lecitin", showPercentage: true, status: "approved" },
-  { id: "d-inulin", technicalName: "Inulin", aliases: ["INULIN_HSI"], canonicalName: "inulin", packagingName: "inulin", materialCode: "DM-5010", group: "Rost", showPercentage: false, status: "approved" },
-  { id: "d-muzli", technicalName: "Málna-müzli", aliases: ["MALNA_MUZLI"], canonicalName: "málnás müzli", packagingName: "málnás müzli", materialCode: "DM-6020", allergen: "zab", group: "Müzli", subIngredients: "zabpehely, liofilizált málna, cukor", showPercentage: true, status: "approved" },
-  { id: "d-malnaaroma", technicalName: "Raspberry flavour mix AR-7", aliases: [], canonicalName: "aroma", packagingName: "aroma", group: "Aroma", showPercentage: false, status: "approved" },
+  {
+    id: "d-joghurtbev",
+    technicalName: "Joghurtos bevonómassza",
+    aliases: ["JOGHURT_BEV"],
+    canonicalName: "joghurtos fehér bevonómassza",
+    packagingName: "joghurtos fehér bevonómassza",
+    materialCode: "DM-2050",
+    manufacturer: "Demo Bevonó Kft.",
+    allergen: "tej",
+    group: "Bevonó",
+    subIngredients: "cukor, növényi zsír, joghurtpor, emulgeálószer: napraforgó-lecitin",
+    showPercentage: true,
+    status: "approved",
+  },
+  {
+    id: "d-inulin",
+    technicalName: "Inulin",
+    aliases: ["INULIN_HSI"],
+    canonicalName: "inulin",
+    packagingName: "inulin",
+    materialCode: "DM-5010",
+    group: "Rost",
+    showPercentage: false,
+    status: "approved",
+  },
+  {
+    id: "d-muzli",
+    technicalName: "Málna-müzli",
+    aliases: ["MALNA_MUZLI"],
+    canonicalName: "málnás müzli",
+    packagingName: "málnás müzli",
+    materialCode: "DM-6020",
+    allergen: "zab",
+    group: "Müzli",
+    subIngredients: "zabpehely, liofilizált málna, cukor",
+    showPercentage: true,
+    status: "approved",
+  },
+  {
+    id: "d-malnaaroma",
+    technicalName: "Raspberry flavour mix AR-7",
+    aliases: [],
+    canonicalName: "aroma",
+    packagingName: "aroma",
+    group: "Aroma",
+    showPercentage: false,
+    status: "approved",
+  },
   {
     id: "d-turo",
     technicalName: "Sovány túró 40+",
@@ -97,7 +141,9 @@ export function matchIngredient(
   const words = new Set(n.split(" ").filter((w) => w.length > 2));
   let best: { id: string; score: number } | null = null;
   for (const e of dict) {
-    const ew = norm(e.technicalName).split(" ").filter((w) => w.length > 2);
+    const ew = norm(e.technicalName)
+      .split(" ")
+      .filter((w) => w.length > 2);
     if (!ew.length) continue;
     const hit = ew.filter((w) => words.has(w)).length / ew.length;
     if (hit >= 0.5 && (!best || hit > best.score)) best = { id: e.id, score: hit };

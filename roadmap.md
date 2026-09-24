@@ -16,4 +16,8 @@
 - [ ] Version comparison (changed values only)
 - [ ] Historical example library + Szabályjavaslat
 - [ ] Editable dictionary/rules/template forms, product-specific exceptions
-- [ ] Offline PWA packaging, IndexedDB storage
+- [x] IndexedDB storage (products, decisions, audit, original files) + Beállítások ADATTÁROLÁS status
+- [x] Every issue has a fix button; smart navigation (scroll, highlight, open field); step counters; VISSZA/TOVÁBB with blocking list
+- [x] Vitest + Testing Library (npm run test / test:run), unit + UI tests
+- [ ] Offline PWA packaging
+- [ ] Full-page UI tests for upload/export screens (covered by manual browser run for now)
