@@ -44,6 +44,8 @@ export interface State {
   rules: RuleDef[];
   admin: boolean;
   categories: Categories;
+  /** DEMO (true) or LIVE TEST (false). Controls visibility and demo seeding only. */
+  demoMode: boolean;
 }
 
 interface Store extends State {
@@ -58,6 +60,11 @@ interface Store extends State {
   resetDemo: () => void;
   addCategory: (id: string, value: string) => void;
   replaceState: (s: State) => void;
+  setDemoMode: (on: boolean) => void;
+  /** Every stored product, including hidden demo records (backup, file bookkeeping). */
+  allProducts: Product[];
+  allDictionary: DictionaryEntry[];
+  rawSettings: Settings;
 }
 
 // Keep one context instance across hot reloads so provider and consumers always match.
@@ -72,7 +79,67 @@ function initial(): State {
     rules: DEFAULT_RULES,
     admin: true,
     categories: DEFAULT_CATEGORIES,
+    demoMode: true,
   };
+}
+
+/* ---------- demo / live separation (pure, tested) ---------- */
+const isDemoProduct = (p: Product) => p.isDemo === true;
+export function visibleProducts(s: Pick<State, "products" | "demoMode">) {
+  return s.demoMode ? s.products : s.products.filter((p) => !isDemoProduct(p));
+}
+export function visibleDictionary(s: Pick<State, "dictionary" | "demoMode">) {
+  return s.demoMode ? s.dictionary : s.dictionary.filter((d) => !d.isDemo);
+}
+/** In LIVE TEST, fictional placeholder defaults are never used in documents. */
+export function effectiveSettings(settings: Settings, demoMode: boolean): Settings {
+  if (demoMode) return settings;
+  const blank = (v: string, d: string) => (v === d ? "" : v);
+  return {
+    ...settings,
+    manufacturer: blank(settings.manufacturer, DEFAULT_SETTINGS.manufacturer),
+    distributor: blank(settings.distributor, DEFAULT_SETTINGS.distributor),
+    userName: settings.userName === DEFAULT_SETTINGS.userName ? "Felhasználó" : settings.userName,
+  };
+}
+/** Replaces demo records only. Real products, files, settings, rules and audit stay untouched. */
+export function resetDemoState(s: State): State {
+  const real = s.products.filter((p) => !isDemoProduct(p));
+  const realDict = s.dictionary.filter((d) => !d.isDemo);
+  return {
+    ...s,
+    products: [...seedProducts(DEMO_DICTIONARY, DEFAULT_SETTINGS.userName), ...real],
+    dictionary: [...realDict, ...DEMO_DICTIONARY],
+  };
+}
+/** Merges a saved state. Demo seeding happens only in DEMO mode. */
+export function mergeSaved(saved: Partial<State>, base: State): State {
+  const demoMode = saved.demoMode ?? true;
+  const known = new Set(DEMO_DICTIONARY.map((d) => d.id));
+  const sd = (saved.dictionary ?? []).map((d) => (known.has(d.id) ? { ...d, isDemo: true } : d));
+  const dictionary: DictionaryEntry[] = demoMode
+    ? [...sd, ...DEMO_DICTIONARY.filter((d) => !sd.some((x) => x.id === d.id))]
+    : sd;
+  // one-time migration of records saved before the explicit isDemo field existed
+  let products: Product[] = (saved.products ?? []).map((p) =>
+    typeof p.isDemo === "boolean"
+      ? p
+      : {
+          ...p,
+          isDemo: /^Demo_.+_recipe\.xlsx$/.test(p.raw.fileName) || !!p.files?.some((f) => f.demo),
+        },
+  );
+  if (demoMode && !products.some((p) => p.isDemo && p.files?.length))
+    products = [demoPackageProduct(dictionary, base.settings.userName), ...products];
+  return {
+    ...base,
+    ...saved,
+    demoMode,
+    dictionary,
+    products,
+    settings: { ...base.settings, ...saved.settings },
+    categories: { ...base.categories, ...saved.categories },
+  } as State;
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -83,6 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     rules: DEFAULT_RULES,
     admin: true,
     categories: DEFAULT_CATEGORIES,
+    demoMode: true,
   });
   const [ready, setReady] = useState(false);
 
@@ -100,25 +168,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch {
         saved = null;
       }
-      let next: State = base;
-      if (saved?.products && saved.dictionary) {
-        const sd = saved.dictionary;
-        const dictionary: DictionaryEntry[] = [
-          ...sd,
-          ...DEMO_DICTIONARY.filter((d) => !sd.some((x) => x.id === d.id)),
-        ];
-        const products: Product[] = saved.products.some((p) => p.files?.length)
-          ? saved.products
-          : [demoPackageProduct(dictionary, base.settings.userName), ...saved.products];
-        next = {
-          ...base,
-          ...saved,
-          dictionary,
-          products,
-          settings: { ...base.settings, ...saved.settings },
-          categories: { ...base.categories, ...saved.categories },
-        } as State;
-      }
+      const next: State = saved?.products && saved.dictionary ? mergeSaved(saved, base) : base;
       if (!alive) return;
       setState(next);
       setReady(true);
@@ -159,6 +209,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       ...state,
+      products: visibleProducts(state),
+      dictionary: visibleDictionary(state),
+      settings: effectiveSettings(state.settings, state.demoMode),
+      allProducts: state.products,
+      allDictionary: state.dictionary,
+      rawSettings: state.settings,
       ready,
       upsertProduct,
       removeProduct: (id) =>
@@ -167,7 +223,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (p) for (const f of productFileIds(p)) void deleteSourceFile(f);
           return { ...s, products: s.products.filter((x) => x.id !== id) };
         }),
-      getProduct: (id) => state.products.find((p) => p.id === id),
+      getProduct: (id) => visibleProducts(state).find((p) => p.id === id),
       upsertEntry: (e) =>
         setState((s) => ({
           ...s,
@@ -179,11 +235,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRules: (rules) => setState((s) => ({ ...s, rules })),
       setAdmin: (admin) => setState((s) => ({ ...s, admin })),
       resetDemo: () => {
-        const next = initial();
+        const next = resetDemoState(state);
         setState(next);
         void syncLocalFiles(next.products);
       },
-      replaceState: (s) => setState(s),
+      setDemoMode: (on) =>
+        setState((s) => {
+          if (!on) return { ...s, demoMode: false };
+          const hasDemo = s.products.some((p) => p.isDemo);
+          const next = hasDemo
+            ? { ...s, demoMode: true }
+            : { ...resetDemoState(s), demoMode: true };
+          if (!hasDemo) void syncLocalFiles(next.products);
+          return next;
+        }),
+      replaceState: (s) => setState(mergeSaved(s, initial())),
       addCategory: (id, value) =>
         setState((s) => ({
           ...s,

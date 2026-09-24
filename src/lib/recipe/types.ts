@@ -76,6 +76,8 @@ export interface RawRecipe {
 
 export interface DictionaryEntry {
   id: string;
+  /** Fictional demo entry – never used in LIVE TEST mode */
+  isDemo?: boolean;
   technicalName: string;
   aliases: string[];
   canonicalName: string;
@@ -116,6 +118,8 @@ export interface VersionEntry {
 
 export interface Product {
   id: string;
+  /** Generated demo record (true) or real user-created record (false) */
+  isDemo: boolean;
   internalId: string;
   recipeVersion: string;
   docVersion: string;

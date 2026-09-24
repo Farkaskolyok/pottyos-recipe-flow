@@ -51,7 +51,8 @@ export const Route = createFileRoute("/uj")({
 const SPEC_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx";
 
 function NewProduct() {
-  const { dictionary, settings, upsertProduct } = useStore();
+  const { dictionary, settings, upsertProduct, demoMode } = useStore();
+  const [fromDemo, setFromDemo] = useState(false);
   const nav = useNavigate();
   const recipeInput = useRef<HTMLInputElement>(null);
   const specInput = useRef<HTMLInputElement>(null);
@@ -69,6 +70,7 @@ function NewProduct() {
       toast.error("Receptúraként csak XLS vagy XLSX fájl tölthető fel.");
       return;
     }
+    setFromDemo(false);
     try {
       const w = await readWorkbook(f);
       setFile(f);
@@ -100,6 +102,7 @@ function NewProduct() {
     const raw = parseWorkbook(wb, file.name, file.size);
     if (!raw.templateId) raw.templateId = tpl || null;
     const p = newProduct(raw, dictionary, settings.userName);
+    p.isDemo = demoMode && fromDemo;
     p.files = applyLinkSuggestions(
       [...specs, ...refs],
       p.ingredients.map((i) => ({ row: i.raw.row, name: i.raw.name })),
@@ -125,7 +128,8 @@ function NewProduct() {
   }
 
   function loadDemo() {
-    loadRecipe(demoFile(DEMO_RECIPES[3]));
+    void loadRecipe(demoFile(DEMO_RECIPES[3]));
+    setFromDemo(true);
     const d = demoSpecFiles();
     void ensureDemoSourceBlobs(d);
     setSpecs(d);
@@ -322,21 +326,23 @@ function NewProduct() {
         </Button>
       </div>
 
-      <div className="mt-10 rounded-2xl border p-5">
-        <h2 className="font-semibold">Demó termékcsomag</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Fiktív recept és 4 fiktív specifikáció – kapcsolással, ütköző értékkel, nem besorolt
-          adattal és jogszabályi figyelmeztetéssel.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="secondary" className="rounded-full" onClick={loadDemo}>
-            Demó csomag betöltése
-          </Button>
-          <Button variant="ghost" className="rounded-full" onClick={downloadDemo}>
-            <Download className="size-4" /> Demó recept letöltése
-          </Button>
+      {demoMode && (
+        <div className="mt-10 rounded-2xl border p-5">
+          <h2 className="font-semibold">Demó termékcsomag</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Fiktív recept és 4 fiktív specifikáció – kapcsolással, ütköző értékkel, nem besorolt
+            adattal és jogszabályi figyelmeztetéssel.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="secondary" className="rounded-full" onClick={loadDemo}>
+              Demó csomag betöltése
+            </Button>
+            <Button variant="ghost" className="rounded-full" onClick={downloadDemo}>
+              <Download className="size-4" /> Demó recept letöltése
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

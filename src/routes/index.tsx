@@ -1,3 +1,4 @@
+import { DemoBadge, ModeSwitch } from "@/components/rf/ModeSwitch";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Plus, ChevronRight } from "lucide-react";
@@ -41,6 +42,9 @@ function Home() {
 
   return (
     <div>
+      <div className="mb-4 flex justify-end">
+        <ModeSwitch />
+      </div>
       <section className="mb-10">
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           <span className="text-primary">PÖTTYÖS</span> RecipeFlow
@@ -99,7 +103,8 @@ function Home() {
                   className="flex items-center gap-4 px-4 py-3.5 hover:bg-muted/60"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold">
+                    <div className="flex items-center gap-2 truncate font-semibold">
+                      {p.isDemo && <DemoBadge />}
                       {String(
                         p.overrides.productName?.value ??
                           p.raw.meta.productName?.value ??

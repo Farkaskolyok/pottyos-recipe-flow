@@ -1,3 +1,4 @@
+import { DemoBadge } from "@/components/rf/ModeSwitch";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Plus } from "lucide-react";
@@ -110,7 +111,8 @@ function Products() {
                   params={{ id: p.id }}
                   className="grid gap-1 px-4 py-3.5 hover:bg-muted/60 md:grid-cols-[2fr_1fr_1.2fr_1fr_1fr] md:items-center md:gap-4"
                 >
-                  <span className="font-semibold">
+                  <span className="flex items-center gap-2 font-semibold">
+                    {p.isDemo && <DemoBadge />}
                     {String(
                       p.overrides.productName?.value ??
                         p.raw.meta.productName?.value ??

@@ -199,6 +199,7 @@ export function newProduct(raw: Product["raw"], dict: DictionaryEntry[], user: s
   const now = new Date().toISOString();
   return {
     id: uid(),
+    isDemo: false,
     internalId: `PT-${Math.floor(1000 + Math.random() * 9000)}`,
     recipeVersion: String(raw.meta.recipeVersion?.value ?? "—"),
     docVersion: "v1.0",
@@ -217,7 +218,10 @@ export function newProduct(raw: Product["raw"], dict: DictionaryEntry[], user: s
 export function seedProducts(dict: DictionaryEntry[], user: string): Product[] {
   const mk = (d: DemoRecipe) => {
     const wb = buildDemoWorkbook(d);
-    return newProduct(parseWorkbook(wb, `Demo_${d.key}_recipe.xlsx`, 18_000), dict, user);
+    return {
+      ...newProduct(parseWorkbook(wb, `Demo_${d.key}_recipe.xlsx`, 18_000), dict, user),
+      isDemo: true,
+    };
   };
   const cocoa = mk(DEMO_RECIPES[1]);
   const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
@@ -258,6 +262,7 @@ export function demoPackageProduct(
     dict,
     user,
   );
+  p.isDemo = true;
   p.status = "review";
   p.files = applyLinkSuggestions(
     demoSpecFiles(),

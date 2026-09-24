@@ -83,6 +83,8 @@ export interface SourceFile {
   /** Only partly readable (legacy .doc without local converter) – requires manual review. */
   partial?: boolean;
   demo?: boolean;
+  /** Explicit demo marker (mirrors `demo`) */
+  isDemo?: boolean;
 }
 
 /* ---------------- persistent local file storage (IndexedDB, for "Forrás megnyitása") ---------------- */
@@ -829,6 +831,7 @@ export function demoSpecFiles(): SourceFile[] {
     unknown: unknown.map(([text, page]) => ({ id: uid(), text, page })),
     linkState: "none",
     demo: true,
+    isDemo: true,
   });
   return [
     f(
