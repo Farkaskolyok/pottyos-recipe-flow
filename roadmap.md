@@ -19,7 +19,7 @@
 - [x] IndexedDB storage (products, decisions, audit, original files) + Beállítások ADATTÁROLÁS status
 - [x] Every issue has a fix button; smart navigation (scroll, highlight, open field); step counters; VISSZA/TOVÁBB with blocking list
 - [x] Vitest + Testing Library (npm run test / test:run), unit + UI tests
-- [ ] Offline PWA packaging
+- [x] Offline PWA packaging
 - [ ] Full-page UI tests for upload/export screens (covered by manual browser run for now)
 
 ## Final hardening pass
@@ -31,5 +31,5 @@
 - [x] Partly read .doc blocks approval until authorized manual review
 - [x] CI workflow (lint, test:run, build)
 - [ ] Open generated files in Microsoft Word (user) ; full manual E2E with real PDF/DOCX/DOC files (user)
-- [ ] Offline start of the app itself needs PWA packaging (still open)
+- [x] Offline start of the app (PWA)
 - [x] Demó mód / Éles teszt switch (isDemo records, hidden demo UI, no demo seeding in live, tests)
