@@ -386,7 +386,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
         blocks = legacyDocBlocks(buf);
         legacyPartial = true;
         sf.warnings.push(LEGACY_DOC_WARNING);
-        sf.warnings.push("Helyi konverter nem érhető el: a szöveg csak részlegesen olvasható, a kinyert adatok nem tekinthetők ellenőrzöttnek.");
+        sf.warnings.push("A dokumentum csak részlegesen olvasható. A véglegesítés előtt ellenőrzés szükséges.");
       }
     } else if (!(ext === "pdf" || ext === "docx" || ext === "xls" || ext === "xlsx")) throw new Error("unsupported");
     if (!blocks.length) {
