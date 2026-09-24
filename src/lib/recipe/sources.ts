@@ -98,6 +98,16 @@ export async function getSourceBlob(fileId: string): Promise<{ blob: Blob; name:
   const rec = await loadFileBlob(fileId).catch(() => undefined);
   return rec ? { blob: rec.blob, name: rec.name } : null;
 }
+/** Fictional demo specifications have no real file: store a small local text original so "Forrás megnyitása" works. */
+export async function ensureDemoSourceBlobs(files: SourceFile[]) {
+  for (const f of files) {
+    if (!f.demo) continue;
+    const have = await loadFileBlob(f.id).catch(() => undefined);
+    if (have) continue;
+    const lines = [`${f.name}`, "FIKTÍV DEMÓ SPECIFIKÁCIÓ – nem valós adat", "", ...f.fields.map((x) => `${x.page ? `[${x.page}. oldal] ` : ""}${x.label}: ${x.value}`)];
+    await saveFileBlob(f.id, new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }), f.name).catch(() => {});
+  }
+}
 /** Opens the locally stored original. Returns false when it is not stored on this device. */
 export async function openSource(fileId: string | undefined, page?: number): Promise<boolean> {
   if (!fileId) return false;

@@ -11,7 +11,7 @@ import { FileStatusBadge } from "@/components/rf/SourceBits";
 import { useStore } from "@/lib/store";
 import { IMPORT_TEMPLATES, parseWorkbook, readWorkbook } from "@/lib/recipe/parse";
 import { DEMO_RECIPES, demoFile, newProduct } from "@/lib/recipe/demo";
-import { applyLinkSuggestions, demoSpecFiles, processFile, SOURCE_TYPE_LABELS, type SourceFile, type SourceType } from "@/lib/recipe/sources";
+import { ensureDemoSourceBlobs, applyLinkSuggestions, demoSpecFiles, processFile, SOURCE_TYPE_LABELS, type SourceFile, type SourceType } from "@/lib/recipe/sources";
 import { fileSize } from "@/lib/recipe/format";
 
 export const Route = createFileRoute("/uj")({
@@ -91,7 +91,9 @@ function NewProduct() {
 
   function loadDemo() {
     loadRecipe(demoFile(DEMO_RECIPES[3]));
-    setSpecs(demoSpecFiles());
+    const d = demoSpecFiles();
+    void ensureDemoSourceBlobs(d);
+    setSpecs(d);
   }
 
   function downloadDemo() {

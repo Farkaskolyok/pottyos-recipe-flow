@@ -307,6 +307,8 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
     const unk = files.reduce((n, f) => n + f.unknown.filter((u) => !u.decision).length, 0);
     const reg = files.reduce((n, f) => n + f.regulatory.filter((r) => r.status === "review").length, 0);
     checks.push({ id: "src-specs", level: "ok", text: `${specs.length} alapanyag specifikáció beolvasva` });
+    const legacy = files.filter((f) => f.ext === "doc" && f.status !== "ok").length;
+    if (legacy) checks.push({ id: "src-legacy", level: "warn", text: `! Régi Word formátum: ${legacy} dokumentum csak részlegesen olvasható – ellenőrzés szükséges`, action: "sources" });
     if (unreadable) checks.push({ id: "src-unread", level: "warn", text: `${unreadable} fájl nem olvasható`, action: "sources" });
     if (suggested) checks.push({ id: "src-link", level: "warn", text: `${suggested} bizonytalan alapanyag-kapcsolat`, action: "sources" });
     if (open) checks.push({ id: "src-conf", level: "error", text: `${open} ütköző érték (ELTÉRŐ ADATOK)`, action: "sources" });
