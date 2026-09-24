@@ -179,6 +179,35 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                 <FileStatusBadge status={f.status} />
               </button>
               <OpenBtn id={f.id} />
+              {f.ext === "doc" && f.status !== "ok" && (
+                p.partialReviewAck?.[f.id] ? (
+                  <span className="text-xs font-semibold text-success">✓ Kézzel ellenőrizve</span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full"
+                    disabled={!admin}
+                    title={admin ? undefined : "Csak jogosult felhasználó"}
+                    onClick={() => {
+                      const note = `Részlegesen olvasott dokumentum kézzel ellenőrizve: ${f.name}`;
+                      onChange(
+                        {
+                          ...p,
+                          partialReviewAck: {
+                            ...(p.partialReviewAck ?? {}),
+                            [f.id]: { by: user, at: now() },
+                          },
+                          audit: audit(note),
+                        },
+                        note,
+                      );
+                    }}
+                  >
+                    Kézi ellenőrzés megtörtént
+                  </Button>
+                )
+              )}
             </li>
           ))}
         </ul>
