@@ -1,3 +1,4 @@
+import { saveFileBlob } from "@/lib/idb";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, type ReactNode } from "react";
 import type { WorkBook } from "xlsx";
@@ -83,6 +84,7 @@ function NewProduct() {
     p.status = "review";
     p.audit = [{ at: p.createdAt, by: settings.userName, text: `Termékcsomag helyben feldolgozva (${1 + specs.length + refs.length} fájl)` }];
     p.history = [{ version: "v1.0", date: p.createdAt, note: `Termékcsomag beolvasva (1 recept, ${specs.length} specifikáció)` }];
+    void saveFileBlob(`recipe:${p.id}`, file, file.name).catch(() => {});
     upsertProduct(p);
     nav({ to: "/termekek/$id", params: { id: p.id } });
   }

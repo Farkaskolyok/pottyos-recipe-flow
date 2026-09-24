@@ -627,7 +627,7 @@ function TraceDrawer({ trace, onClose }: { trace: { key: string; v: TracedValue 
                 variant="outline"
                 className="mt-4 rounded-full"
                 onClick={() => {
-                  if (!openSource(v.source?.fileId, v.source?.page)) toast.info("A forrásfájl ebben a munkamenetben nem érhető el (a tartalmat nem tároljuk). Nyisd meg helyben.");
+                  void openSource(v.source?.fileId, v.source?.page).then((ok) => { if (!ok) toast.info("Az eredeti fájl nincs eltárolva ezen az eszközön (demó adat vagy korábbi feltöltés)."); });
                 }}
               >
                 Forrás megnyitása

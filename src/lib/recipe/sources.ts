@@ -1,3 +1,4 @@
+import { loadFileBlob, saveFileBlob } from "@/lib/idb";
 // Multi-file product package: recipe + supplier / raw material specifications + historical references.
 // All extraction is deterministic and runs in the browser. No file content leaves the device.
 import * as XLSX from "xlsx";
@@ -77,16 +78,38 @@ export interface SourceFile {
   demo?: boolean;
 }
 
-/* ---------------- local session file cache (for "Forrás megnyitása") ---------------- */
+/* ---------------- persistent local file storage (IndexedDB, for "Forrás megnyitása") ---------------- */
 const SESSION_FILES = new Map<string, File>();
 export function sessionFile(id: string) {
   return SESSION_FILES.get(id);
 }
-export function openSource(fileId: string | undefined, page?: number): boolean {
-  const f = fileId ? SESSION_FILES.get(fileId) : undefined;
-  if (!f) return false;
-  const url = URL.createObjectURL(f) + (page && /\.pdf$/i.test(f.name) ? `#page=${page}` : "");
-  window.open(url, "_blank", "noopener");
+/** Stores the original file on this device so it can be reopened after reload/restart. */
+export async function persistSourceFile(id: string, file: File) {
+  SESSION_FILES.set(id, file);
+  try {
+    await saveFileBlob(id, file, file.name);
+  } catch {
+    /* storage full or unavailable – file stays available for this session */
+  }
+}
+export async function getSourceBlob(fileId: string): Promise<{ blob: Blob; name: string } | null> {
+  const f = SESSION_FILES.get(fileId);
+  if (f) return { blob: f, name: f.name };
+  const rec = await loadFileBlob(fileId).catch(() => undefined);
+  return rec ? { blob: rec.blob, name: rec.name } : null;
+}
+/** Opens the locally stored original. Returns false when it is not stored on this device. */
+export async function openSource(fileId: string | undefined, page?: number): Promise<boolean> {
+  if (!fileId) return false;
+  const win = window.open("", "_blank");
+  const got = await getSourceBlob(fileId);
+  if (!got) {
+    win?.close();
+    return false;
+  }
+  const url = URL.createObjectURL(got.blob) + (page && /\.pdf$/i.test(got.name) ? `#page=${page}` : "");
+  if (win) win.location.href = url;
+  else window.open(url, "_blank");
   return true;
 }
 
@@ -346,7 +369,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     unknown: [],
     linkState: "none",
   };
-  SESSION_FILES.set(sf.id, file);
+  await persistSourceFile(sf.id, file);
   try {
     const buf = await file.arrayBuffer();
     let blocks: Block[] = [];
