@@ -89,7 +89,7 @@ export const FIELDS: Record<string, FieldDef> = Object.fromEntries(
 const NUTRIENT_UNITS: Record<string, string> = { energyKj: "kJ", energyKcal: "kcal" };
 
 export function fieldDef(key: string, label?: string): FieldDef {
-  if (FIELDS[key]) return FIELDS[key];
+  if (FIELDS[key]) return label && FIELDS[key].label === key ? { ...FIELDS[key], label } : FIELDS[key];
   if (key.startsWith("n100.")) {
     const n = key.slice(5);
     return { key, label: label ?? n, editType: "NUMBER", unit: NUTRIENT_UNITS[n] ?? "g" };
