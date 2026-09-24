@@ -103,9 +103,7 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
   const regGroups = [...new Set(regs.map(({ r }) => r.identifier))].map((id) => {
     const items = regs.filter(({ r }) => r.identifier === id);
     const best =
-      items.find(({ r }) => regVerified(r)) ??
-      items.find(({ r }) => regBad(r)) ??
-      items[0]!;
+      items.find(({ r }) => regVerified(r)) ?? items.find(({ r }) => regBad(r)) ?? items[0]!;
     return { id, r: best.r, items };
   });
   const [checking, setChecking] = useState<string | null>(null);
@@ -164,7 +162,11 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
       );
       toast.error(`${identifier}: Nem található`);
     } else {
-      setReg(identifier, { ...base, status: "invalid" }, `Online ellenőrzés: ${identifier} → hibás`);
+      setReg(
+        identifier,
+        { ...base, status: "invalid" },
+        `Online ellenőrzés: ${identifier} → hibás`,
+      );
       toast.error(`${identifier}: Hibás hivatkozás`);
     }
   };
@@ -654,8 +656,8 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                     ))}
                     {r.reviewedAt && r.verificationMethod !== "library" && (
                       <span className="block">
-                        {r.verificationMethod === "online" ? "Online" : "Kézi"} ·{" "}
-                        {r.reviewedBy} · {new Date(r.reviewedAt).toLocaleString("hu-HU")}
+                        {r.verificationMethod === "online" ? "Online" : "Kézi"} · {r.reviewedBy} ·{" "}
+                        {new Date(r.reviewedAt).toLocaleString("hu-HU")}
                         {r.sourceUrl && (
                           <>
                             {" · "}
@@ -681,14 +683,12 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
                       disabled={checking === id}
                       onClick={() => void checkOnline(id)}
                     >
-                      {checking === id
-                        ? "…"
-                        : done
-                          ? "ÚJRA ELLENŐRZÉS"
-                          : "ONLINE ELLENŐRZÉS"}
+                      {checking === id ? "…" : done ? "ÚJRA ELLENŐRZÉS" : "ONLINE ELLENŐRZÉS"}
                     </Button>
                     {done ? (
-                      <span className="self-center text-xs font-bold text-success">ELLENŐRZÖTT</span>
+                      <span className="self-center text-xs font-bold text-success">
+                        ELLENŐRZÖTT
+                      </span>
                     ) : (
                       <Button
                         size="sm"

@@ -55,7 +55,9 @@ describe("source extraction false positives", () => {
     const f = run("pH: 4,2", "pH: 4,2").fields.filter((x) => x.key === "q.ph");
     expect(f).toHaveLength(1);
     expect(f[0]!.suspect).toBeUndefined();
-    expect(run("Allergens: milk", "Allergens: milk").fields.filter((x) => x.key === "allergens")).toHaveLength(1);
+    expect(
+      run("Allergens: milk", "Allergens: milk").fields.filter((x) => x.key === "allergens"),
+    ).toHaveLength(1);
   });
   it("conflicting values remain visible", () => {
     const f = run("pH: 4,2", "pH: 4,8").fields.filter((x) => x.key === "q.ph");

@@ -109,7 +109,9 @@ describe("product package", () => {
       ...f,
       regulatory: f.regulatory.map((r) => ({ ...r, status: "not_found" as const })),
     }));
-    expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-reg-bad")?.level).toBe("error");
+    expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-reg-bad")?.level).toBe(
+      "error",
+    );
   });
 });
 

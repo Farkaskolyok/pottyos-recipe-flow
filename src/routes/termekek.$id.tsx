@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, Pencil, RotateCcw, Check as CheckIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ import { LevelIcon, MatchPill, OriginTag, Panel, StatusPill } from "@/components
 import { DocPreview } from "@/components/rf/DocPreview";
 import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineField";
 import { cn } from "@/lib/utils";
+import { ProductActions } from "@/components/rf/ProductActions";
 import { SourcesStep } from "@/components/rf/SourcesStep";
 import { openSource, recipeFileId } from "@/lib/recipe/sources";
 import {
@@ -74,6 +75,7 @@ function bump(p: Product, note: string): Product {
 }
 
 function ProductPage() {
+  const navigate = useNavigate();
   const { id } = Route.useParams();
   const store = useStore();
   const p = store.getProduct(id);
@@ -266,7 +268,14 @@ function ProductPage() {
               {p.raw.fileName}
             </p>
           </div>
-          <StatusPill status={p.status} />
+          <div className="flex items-center gap-2">
+            <StatusPill status={p.status} />
+            <ProductActions
+              id={p.id}
+              name={String(name)}
+              onDeleted={() => void navigate({ to: "/termekek" })}
+            />
+          </div>
         </div>
 
         {/* Hol tartok? */}
