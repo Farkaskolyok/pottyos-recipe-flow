@@ -1,3 +1,4 @@
+import { LiveBadge } from "@/components/rf/ModeSwitch";
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
@@ -65,14 +66,20 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function ModeIndicator() {
+  const { demoMode, ready } = useStore();
+  return ready && !demoMode ? <LiveBadge /> : null;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const mobile = NAV.slice(0, 4);
   return (
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r bg-sidebar p-4 lg:flex">
-        <div className="mb-8 px-2 pt-1">
+        <div className="mb-8 space-y-2 px-2 pt-1">
           <Logo />
+          <ModeIndicator />
         </div>
         <NavList />
         <p className="mt-auto px-3 text-xs text-muted-foreground">
@@ -82,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
         <Logo />
+        <ModeIndicator />
         <Sheet>
           <SheetTrigger
             className="inline-flex size-10 items-center justify-center rounded-full hover:bg-muted"

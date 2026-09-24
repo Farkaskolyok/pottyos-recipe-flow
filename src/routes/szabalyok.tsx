@@ -60,8 +60,7 @@ function Rules() {
                     </div>
                     <Switch
                       checked={r.active}
-                      disabled
-                      title="A kerekítési szabályok a demóban nem kapcsolhatók ki"
+                      aria-label={`${r.name} bekapcsolva`}
                       onCheckedChange={(v) =>
                         setRules(rules.map((x) => (x.id === r.id ? { ...x, active: v } : x)))
                       }
