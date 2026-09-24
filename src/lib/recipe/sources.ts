@@ -26,11 +26,7 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
 export type FileStatus = "ok" | "review" | "unreadable";
 export type LinkState = "linked" | "suggested" | "rejected" | "none";
 export type RegStatus =
-  | "unverified"
-  | "verified_local"
-  | "verified_online"
-  | "not_found"
-  | "invalid";
+  "unverified" | "verified_local" | "verified_online" | "not_found" | "invalid";
 export const REG_LABELS: Record<RegStatus, string> = {
   unverified: "Nem ellenőrzött",
   verified_local: "Ellenőrzött",
@@ -552,7 +548,10 @@ export function isNoiseText(t: string) {
 
 /** Parses a measured value / limit that is clearly connected to the parameter. */
 export function parseQualityValue(key: string, raw: string) {
-  const method = raw.match(STD_REF)?.map((m) => m.trim()).join(", ");
+  const method = raw
+    .match(STD_REF)
+    ?.map((m) => m.trim())
+    .join(", ");
   const methodWord = raw.match(/(?:method|módszer|mérés)\s*:?\s*([^;,]+)/i)?.[1]?.trim();
   let rest = raw
     .replace(/(?:method|módszer|mérés)\s*:?\s*[^;,]+/gi, " ")
@@ -563,7 +562,11 @@ export function parseQualityValue(key: string, raw: string) {
   rest = rest.replace(/\s+/g, " ").trim();
   if (MICRO.has(key)) {
     if (/negat|absent|nem kimutat|not detected|nd\b|hiány|nincs/i.test(rest))
-      return { value: key === "q.salmonella" ? "0" : "nem kimutatható", num: 0, method: method ?? methodWord };
+      return {
+        value: key === "q.salmonella" ? "0" : "nem kimutatható",
+        num: 0,
+        method: method ?? methodWord,
+      };
   }
   const OP = "(?:[=<>≤≥]|max\\.?|min\\.?|maximum|minimum|legfeljebb|legalább)";
   const NUMS = "(-?\\d+(?:[.,]\\d+)?(?:\\s?[x×]\\s?10\\^?\\d+)?)";

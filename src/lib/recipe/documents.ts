@@ -175,9 +175,7 @@ export function buildDocs(
   const ingText = ds.ingredientText;
   const regs = [
     b.legalRef.display,
-    ...(p.files ?? []).flatMap((f) =>
-      f.regulatory.filter(regVerified).map((r) => r.identifier),
-    ),
+    ...(p.files ?? []).flatMap((f) => f.regulatory.filter(regVerified).map((r) => r.identifier)),
   ].filter((x, i, a) => x && a.indexOf(x) === i);
   const byId = new Map(dict.map((d) => [d.id, d]));
   const sortedIngs = [...p.ingredients].sort(
