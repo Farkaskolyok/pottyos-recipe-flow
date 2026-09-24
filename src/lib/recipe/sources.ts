@@ -422,7 +422,7 @@ export function demoSpecFiles(): SourceFile[] {
     status,
     warnings,
     detectedMaterial: material,
-    fields: [{ key: "product_description", label: "Termékmegnevezés", value: material, page: 1, outputs: ["internal"] }, ...fields].map((x) => ({ ...x, original: `${x.label}: ${x.value}${x.unit ? " " + x.unit : ""}${x.tolerance ? " " + x.tolerance : ""}` })),
+    fields: ([{ key: "product_description", label: "Termékmegnevezés", value: material, page: 1, outputs: ["internal"] }] as Omit<ExtractedField, "original">[]).concat(fields).map((x) => ({ ...x, original: `${x.label}: ${x.value}${x.unit ? " " + x.unit : ""}${x.tolerance ? " " + x.tolerance : ""}` })),
     regulatory: reg.map(([idf, page]) => {
       const lib = REGULATORY_LIBRARY[idf];
       return { id: uid(), identifier: idf, page, original: `Megfelel a(z) ${idf} rendelet előírásainak.`, status: lib?.status ?? "review", reviewedAt: lib?.reviewedAt };

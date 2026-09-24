@@ -44,7 +44,10 @@ function NewProduct() {
   const [busy, setBusy] = useState(0);
 
   async function loadRecipe(f: File) {
-    if (!/\.(xlsx|xls)$/i.test(f.name)) return toast.error("Receptúraként csak XLS vagy XLSX fájl tölthető fel.");
+    if (!/\.(xlsx|xls)$/i.test(f.name)) {
+      toast.error("Receptúraként csak XLS vagy XLSX fájl tölthető fel.");
+      return;
+    }
     try {
       const w = await readWorkbook(f);
       setFile(f);
