@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
 import { autoIngredientText, buildDataset } from "@/lib/recipe/engine";
-import { buildDocs, DOC_TITLES } from "@/lib/recipe/documents";
+import { buildDocs, crossCheck, DOC_TITLES } from "@/lib/recipe/documents";
 import { exportAll, exportDocx } from "@/lib/recipe/docx";
 import type { Product, ResolvedIngredient, TracedValue, DictionaryEntry } from "@/lib/recipe/types";
 import { huDate, huNumber, uid } from "@/lib/recipe/format";
@@ -656,28 +656,49 @@ type Docs = ReturnType<typeof buildDocs>;
 
 function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
   const [tab, setTab] = useState<keyof Docs>("sheet");
+  const diffs = crossCheck(docs);
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-full bg-muted p-1">
+    <div className="space-y-5">
+      <Panel>
+        <h2 className="mb-4 text-lg font-bold">Dokumentumok</h2>
+        <ul className="divide-y">
           {(Object.keys(DOC_TITLES) as (keyof Docs)[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={cn("rounded-full px-3 py-1.5 text-sm font-medium sm:px-4", tab === k ? "bg-background shadow-sm" : "text-muted-foreground")}
-            >
-              {DOC_TITLES[k]}
-            </button>
+            <li key={k} className="flex flex-wrap items-center gap-3 py-3">
+              <button onClick={() => setTab(k)} className={cn("flex-1 text-left font-semibold", tab === k && "text-primary")}>{DOC_TITLES[k]}</button>
+              <span className="text-sm font-semibold text-success">✓ kész</span>
+              <Button size="sm" variant="outline" className="rounded-full" onClick={() => exportDocx(docs[k])}>
+                <Download className="size-4" /> Word letöltése
+              </Button>
+            </li>
           ))}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-full" onClick={() => exportDocx(docs[tab])}>
-            <Download className="size-4" /> Export
+        </ul>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <Button variant="outline" className="rounded-full" onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}>
+            <Download className="size-4" /> Mindhárom letöltése
           </Button>
-          <Button className="rounded-full" onClick={onApprove}>
-            Jóváhagyás
-          </Button>
+          <Button className="rounded-full" onClick={onApprove}>Jóváhagyás</Button>
         </div>
+      </Panel>
+      <Panel>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-bold">Dokumentumok összevetése</h2>
+          <LevelIcon level={diffs.length ? "warn" : "ok"} className="size-6" />
+        </div>
+        {diffs.length ? (
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Mező</th><th>GYL</th><th>SPEC</th><th>Szövegterv</th></tr></thead>
+            <tbody className="divide-y">{diffs.map((d) => <tr key={d.field}><td className="py-1.5 font-medium">! {d.field}</td><td>{d.sheet}</td><td>{d.spec}</td><td>{d.pack ?? "—"}</td></tr>)}</tbody>
+          </table>
+        ) : (
+          <p className="text-sm text-muted-foreground">A három dokumentum ugyanabból az adatkészletből készül – nincs eltérés.</p>
+        )}
+      </Panel>
+      <div className="inline-flex rounded-full bg-muted p-1">
+        {(Object.keys(DOC_TITLES) as (keyof Docs)[]).map((k) => (
+          <button key={k} onClick={() => setTab(k)} className={cn("rounded-full px-3 py-1.5 text-sm font-medium sm:px-4", tab === k ? "bg-background shadow-sm" : "text-muted-foreground")}>
+            {DOC_TITLES[k]}
+          </button>
+        ))}
       </div>
       <DocPreview doc={docs[tab]} />
     </div>
@@ -691,10 +712,10 @@ function ExportButtons({ docs }: { docs: Docs }) {
         <Download className="size-4" /> Gyártmánylap letöltése
       </Button>
       <Button variant="outline" className="h-12 rounded-full" onClick={() => exportDocx(docs.spec)}>
-        <Download className="size-4" /> Termékspecifikáció letöltése
+        <Download className="size-4" /> Késztermék specifikáció letöltése
       </Button>
       <Button variant="outline" className="h-12 rounded-full" onClick={() => exportDocx(docs.pack)}>
-        <Download className="size-4" /> Csomagolási szöveg letöltése
+        <Download className="size-4" /> Szövegterv letöltése
       </Button>
       <Button className="h-12 rounded-full" onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}>
         <Download className="size-4" /> Összes dokumentum exportálása

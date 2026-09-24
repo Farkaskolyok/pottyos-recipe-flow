@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
 import { IMPORT_TEMPLATES } from "@/lib/recipe/parse";
+import { DOC_TITLES, FIELD_CLASS_LABELS, TEMPLATE_MAPS } from "@/lib/recipe/documents";
 import type { AllergenFormat } from "@/lib/recipe/engine";
 import { DesktopHint, PageHeader, Panel } from "@/components/rf/ui";
 import { cn } from "@/lib/utils";
@@ -48,14 +49,20 @@ function Templates() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel>
           <h2 className="font-bold">Dokumentumsablonok</h2>
-          <ul className="mt-3 divide-y text-sm">
-            {["Gyártmánylap v1", "Termékspecifikáció v1", "Csomagolási szöveg v1"].map((t) => (
-              <li key={t} className="flex justify-between py-2.5">
-                <span className="font-medium">{t}</span>
-                <span className="text-muted-foreground">Arial · fejléc, lábléc, táblázatok</span>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-1 text-xs text-muted-foreground">A korábbi dokumentumok csak a szerkezetet adják. Az értékek mindig az aktuális termékadatokból jönnek.</p>
+          {(Object.keys(TEMPLATE_MAPS) as (keyof typeof TEMPLATE_MAPS)[]).map((k) => (
+            <details key={k} className="mt-3 rounded-xl border px-3 py-2">
+              <summary className="cursor-pointer font-medium">{DOC_TITLES[k]} master <span className="text-xs text-muted-foreground">· {TEMPLATE_MAPS[k].filter(([, c]) => c === "UNCERTAIN").length} ellenőrizendő mezőtípus</span></summary>
+              <ul className="mt-2 divide-y text-sm">
+                {TEMPLATE_MAPS[k].map(([f, c]) => (
+                  <li key={f} className="flex justify-between gap-3 py-1.5">
+                    <span>{f}</span>
+                    <span className={cn("shrink-0 text-xs font-medium", c === "UNCERTAIN" ? "text-warning" : "text-muted-foreground")}>{c === "UNCERTAIN" ? "! " : ""}{FIELD_CLASS_LABELS[c]}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
           <h3 className="mb-2 mt-6 font-semibold">Allergén kiemelés</h3>
           <div className="grid gap-2 sm:grid-cols-3">
             {opts.map(([k, l, ex]) => (
