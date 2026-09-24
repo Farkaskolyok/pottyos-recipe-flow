@@ -4,9 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { idbAvailable, storageEstimate } from "@/lib/idb";
+import { createBackup, downloadBackup, parseBackup, restoreBackup } from "@/lib/backup";
+import { templatesStoredLocally } from "@/lib/recipe/docxTemplate";
+import type { State } from "@/lib/store";
 import { PageHeader, Panel } from "@/components/rf/ui";
 
 export const Route = createFileRoute("/beallitasok")({
@@ -25,7 +28,51 @@ export const Route = createFileRoute("/beallitasok")({
 });
 
 function SettingsPage() {
-  const { settings, setSettings, admin, setAdmin, resetDemo } = useStore();
+  const store = useStore();
+  const { settings, setSettings, admin, setAdmin, resetDemo } = store;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [tplLocal, setTplLocal] = useState<boolean | null>(null);
+  async function doBackup() {
+    setBusy(true);
+    try {
+      const state: State = {
+        products: store.products,
+        dictionary: store.dictionary,
+        settings: store.settings,
+        rules: store.rules,
+        admin: store.admin,
+        categories: store.categories,
+      };
+      const b = await createBackup(state);
+      downloadBackup(b);
+      toast.success(`Helyi mentés elkészült (${b.files.length} fájl)`);
+    } catch {
+      toast.error("A mentés nem sikerült.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function doRestore(f: File) {
+    setBusy(true);
+    try {
+      const b = parseBackup(await f.text());
+      if (
+        !window.confirm(
+          `Visszaállítás: ${(b.state as State).products.length} termék, ${b.files.length} fájl (${b.createdAt.slice(0, 10)}). A jelenlegi helyi adatok felülíródnak. Folytatja?`,
+        )
+      )
+        return;
+      const st = (await restoreBackup(b)) as State;
+      store.replaceState(st);
+      toast.success("Helyi mentés visszaállítva");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "A visszaállítás nem sikerült.");
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
   const field = (k: "userName" | "manufacturer" | "distributor" | "storage", l: string) => (
     <div>
       <Label>{l}</Label>
@@ -41,6 +88,7 @@ function SettingsPage() {
   useEffect(() => {
     setLocal(idbAvailable());
     void storageEstimate().then(setUsage);
+    void templatesStoredLocally().then(setTplLocal);
   }, []);
   const row = (k: string, v: string, ok?: boolean) => (
     <div className="flex items-center justify-between py-2 text-sm">
@@ -56,6 +104,16 @@ function SettingsPage() {
           <h2 className="mb-2 font-bold uppercase tracking-wide">Adattárolás</h2>
           <div className="divide-y">
             {row("Helyi tárhely", local == null ? "…" : local ? "✓" : "Nem elérhető", !!local)}
+            {row(
+              "Tartós tárhely",
+              usage == null ? "…" : usage.persisted ? "✓ Garantált" : "! Nem garantált",
+              !!usage?.persisted,
+            )}
+            {row(
+              "Word mestersablonok offline",
+              tplLocal == null ? "…" : tplLocal ? "✓ Helyben tárolva" : "! Még nincs letöltve",
+              !!tplLocal,
+            )}
             {row("Internet szükséges", "Nem")}
             {row("Felhő szinkronizáció", "Kikapcsolva")}
             {row(
@@ -65,10 +123,48 @@ function SettingsPage() {
                 : "—",
             )}
           </div>
+          {usage && !usage.persisted && (
+            <p role="alert" className="mt-2 rounded-lg bg-warning-soft p-2 text-xs">
+              ! A böngésző nem garantálja a tartós tárolást: az operációs rendszer vagy a böngésző
+              helyhiány esetén törölheti a webhely adatait. Készítsen rendszeresen helyi biztonsági
+              mentést.
+            </p>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">
             Termékek, döntések, előzmények és az eredeti feltöltött fájlok ezen az eszközön
             tárolódnak, újraindítás után is megmaradnak.
           </p>
+        </Panel>
+        <Panel>
+          <h2 className="mb-1 font-bold uppercase tracking-wide">Biztonsági mentés</h2>
+          <p className="text-sm text-muted-foreground">
+            Egyetlen fájl ezen az eszközön: termékek, szabályok, szótár, kategóriák, előzmények,
+            eredeti forrásfájlok és sablonverziók. Nem kerül felhőbe.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="rounded-full" disabled={busy} onClick={() => void doBackup()}>
+              HELYI BIZTONSÁGI MENTÉS
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              disabled={busy}
+              onClick={() => fileInput.current?.click()}
+            >
+              HELYI MENTÉS VISSZAÁLLÍTÁSA
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              aria-label="Mentésfájl kiválasztása"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void doRestore(f);
+              }}
+            />
+          </div>
         </Panel>
         <Panel className="space-y-4">
           {field("userName", "Felhasználó neve")}

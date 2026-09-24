@@ -12,10 +12,24 @@ import type { DictionaryEntry, Product } from "./recipe/types";
 import { DEMO_DICTIONARY } from "./recipe/dictionary";
 import { DEFAULT_SETTINGS, type Settings } from "./recipe/engine";
 import { DEFAULT_RULES, type RuleDef } from "./recipe/rules";
-import { demoPackageProduct, seedProducts } from "./recipe/demo";
+import { DEMO_RECIPES, demoFile, demoPackageProduct, seedProducts } from "./recipe/demo";
 import { DEFAULT_CATEGORIES } from "./recipe/fields";
-import { idbAvailable, idbGet, idbPut, STORES } from "./idb";
-import { ensureDemoSourceBlobs } from "./recipe/sources";
+import {
+  idbAvailable,
+  idbGet,
+  idbPut,
+  loadFileBlob,
+  purgeOrphanFiles,
+  saveFileBlob,
+  STORES,
+} from "./idb";
+import {
+  deleteSourceFile,
+  ensureDemoSourceBlobs,
+  productFileIds,
+  recipeFileId,
+} from "./recipe/sources";
+import { ensureMasterTemplates } from "./recipe/docxTemplate";
 
 type Categories = Record<string, { label: string; options: string[] }>;
 
@@ -23,7 +37,7 @@ type Categories = Record<string, { label: string; options: string[] }>;
 const KEY = "recipeflow.v1"; // legacy localStorage key, migrated once
 const IDB_KEY = "app";
 
-interface State {
+export interface State {
   products: Product[];
   dictionary: DictionaryEntry[];
   settings: Settings;
@@ -43,6 +57,7 @@ interface Store extends State {
   setAdmin: (a: boolean) => void;
   resetDemo: () => void;
   addCategory: (id: string, value: string) => void;
+  replaceState: (s: State) => void;
 }
 
 // Keep one context instance across hot reloads so provider and consumers always match.
@@ -107,7 +122,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!alive) return;
       setState(next);
       setReady(true);
-      void ensureDemoSourceBlobs(next.products.flatMap((p) => p.files ?? []));
+      void syncLocalFiles(next.products);
+      void ensureMasterTemplates();
       void navigator.storage?.persist?.().catch(() => {});
     })();
     return () => {
@@ -146,7 +162,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ready,
       upsertProduct,
       removeProduct: (id) =>
-        setState((s) => ({ ...s, products: s.products.filter((p) => p.id !== id) })),
+        setState((s) => {
+          const p = s.products.find((x) => x.id === id);
+          if (p) for (const f of productFileIds(p)) void deleteSourceFile(f);
+          return { ...s, products: s.products.filter((x) => x.id !== id) };
+        }),
       getProduct: (id) => state.products.find((p) => p.id === id),
       upsertEntry: (e) =>
         setState((s) => ({
@@ -158,7 +178,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSettings: (settings) => setState((s) => ({ ...s, settings })),
       setRules: (rules) => setState((s) => ({ ...s, rules })),
       setAdmin: (admin) => setState((s) => ({ ...s, admin })),
-      resetDemo: () => setState(initial()),
+      resetDemo: () => {
+        const next = initial();
+        setState(next);
+        void syncLocalFiles(next.products);
+      },
+      replaceState: (s) => setState(s),
       addCategory: (id, value) =>
         setState((s) => ({
           ...s,
@@ -175,6 +200,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/**
+ * Keeps the local file store consistent with the products: removes orphaned confidential
+ * originals, then recreates the fictional demo originals so "Forrás megnyitása" works.
+ */
+export async function syncLocalFiles(products: Product[]) {
+  if (!idbAvailable()) return;
+  const keep = new Set(products.flatMap(productFileIds));
+  await purgeOrphanFiles(keep).catch(() => {});
+  await ensureDemoSourceBlobs(products.flatMap((p) => p.files ?? []));
+  for (const p of products) {
+    const m = /^Demo_(.+)_recipe\.xlsx$/.exec(p.raw.fileName);
+    const d = m && DEMO_RECIPES.find((r) => r.key === m[1]);
+    if (!d) continue;
+    const id = recipeFileId(p.id);
+    if (await loadFileBlob(id).catch(() => undefined)) continue;
+    const f = demoFile(d);
+    await saveFileBlob(id, f, p.raw.fileName).catch(() => {});
+  }
 }
 
 export function useStore() {

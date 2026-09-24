@@ -15,3 +15,8 @@ if (!("ResizeObserver" in globalThis))
 Element.prototype.scrollIntoView ??= function () {};
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.releasePointerCapture ??= () => {};
+
+// Use Node's native Blob/File so IndexedDB (fake-indexeddb, structured clone) keeps real Blobs.
+import { Blob as NodeBlob, File as NodeFile } from "node:buffer";
+(globalThis as unknown as { Blob: unknown }).Blob = NodeBlob;
+(globalThis as unknown as { File: unknown }).File = NodeFile;

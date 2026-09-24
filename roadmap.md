@@ -21,3 +21,14 @@
 - [x] Vitest + Testing Library (npm run test / test:run), unit + UI tests
 - [ ] Offline PWA packaging
 - [ ] Full-page UI tests for upload/export screens (covered by manual browser run for now)
+
+## Final hardening pass
+- [x] Offline master templates (IndexedDB, versioned) — verified offline export of all three
+- [x] Hard-fail historical leak test (hashed denylist) + exact placeholder tests; builder exits on leak
+- [x] Orphaned blob deletion (removed file, deleted product, demo reset, start-up purge)
+- [x] Recipe values reopen stored recipe file
+- [x] Tartós tárhely status + warning; HELYI BIZTONSÁGI MENTÉS / VISSZAÁLLÍTÁS
+- [x] Partly read .doc blocks approval until authorized manual review
+- [x] CI workflow (lint, test:run, build)
+- [ ] Open generated files in Microsoft Word (user) ; full manual E2E with real PDF/DOCX/DOC files (user)
+- [ ] Offline start of the app itself needs PWA packaging (still open)

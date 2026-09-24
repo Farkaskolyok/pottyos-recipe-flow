@@ -25,6 +25,8 @@ import {
   SOURCE_TYPE_LABELS,
   type SourceFile,
   type SourceType,
+  deleteSourceFile,
+  recipeFileId,
 } from "@/lib/recipe/sources";
 import { fileSize } from "@/lib/recipe/format";
 
@@ -117,7 +119,7 @@ function NewProduct() {
         note: `Termékcsomag beolvasva (1 recept, ${specs.length} specifikáció)`,
       },
     ];
-    void saveFileBlob(`recipe:${p.id}`, file, file.name).catch(() => {});
+    void saveFileBlob(recipeFileId(p.id), file, file.name).catch(() => {});
     upsertProduct(p);
     nav({ to: "/termekek/$id", params: { id: p.id } });
   }
@@ -234,7 +236,10 @@ function NewProduct() {
                     </Select>
                   }
                   status={<FileStatusBadge status={s.status} />}
-                  onRemove={() => setSpecs((x) => x.filter((f) => f.id !== s.id))}
+                  onRemove={() => {
+                    void deleteSourceFile(s.id);
+                    setSpecs((x) => x.filter((f) => f.id !== s.id));
+                  }}
                 />
               </li>
             ))}
@@ -272,7 +277,10 @@ function NewProduct() {
                   name={s.name}
                   meta={SOURCE_TYPE_LABELS[s.sourceType]}
                   status={<FileStatusBadge status={s.status} />}
-                  onRemove={() => setRefs((x) => x.filter((f) => f.id !== s.id))}
+                  onRemove={() => {
+                    void deleteSourceFile(s.id);
+                    setRefs((x) => x.filter((f) => f.id !== s.id));
+                  }}
                 />
               </li>
             ))}

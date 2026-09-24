@@ -135,6 +135,8 @@ export interface Product {
   ingredientTextOverride?: string;
   ingredientTextMeta?: { by: string; at: string; previous: string };
   regulatoryAck?: Record<string, { by: string; at: string }>;
+  /** Authorized manual review of partly read sources (legacy .doc), keyed by file id */
+  partialReviewAck?: Record<string, { by: string; at: string }>;
   history: VersionEntry[];
   /** Multi-file product package (recipe + specifications + references). Content is never stored, only extracted data. */
   files?: import("./sources").SourceFile[];
