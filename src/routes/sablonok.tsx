@@ -10,7 +10,10 @@ export const Route = createFileRoute("/sablonok")({
   head: () => ({
     meta: [
       { title: "Sablonok – PÖTTYÖS RecipeFlow" },
-      { name: "description", content: "Import- és dokumentumsablonok, allergén kiemelés beállítása." },
+      {
+        name: "description",
+        content: "Import- és dokumentumsablonok, allergén kiemelés beállítása.",
+      },
       { property: "og:title", content: "Sablonok – PÖTTYÖS RecipeFlow" },
       { property: "og:description", content: "Import- és dokumentumsablonok." },
     ],
@@ -49,15 +52,32 @@ function Templates() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel>
           <h2 className="font-bold">Dokumentumsablonok</h2>
-          <p className="mt-1 text-xs text-muted-foreground">A korábbi dokumentumok csak a szerkezetet adják. Az értékek mindig az aktuális termékadatokból jönnek.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            A korábbi dokumentumok csak a szerkezetet adják. Az értékek mindig az aktuális
+            termékadatokból jönnek.
+          </p>
           {(Object.keys(TEMPLATE_MAPS) as (keyof typeof TEMPLATE_MAPS)[]).map((k) => (
             <details key={k} className="mt-3 rounded-xl border px-3 py-2">
-              <summary className="cursor-pointer font-medium">{DOC_TITLES[k]} master <span className="text-xs text-muted-foreground">· {TEMPLATE_MAPS[k].filter(([, c]) => c === "UNCERTAIN").length} ellenőrizendő mezőtípus</span></summary>
+              <summary className="cursor-pointer font-medium">
+                {DOC_TITLES[k]} master{" "}
+                <span className="text-xs text-muted-foreground">
+                  · {TEMPLATE_MAPS[k].filter(([, c]) => c === "UNCERTAIN").length} ellenőrizendő
+                  mezőtípus
+                </span>
+              </summary>
               <ul className="mt-2 divide-y text-sm">
                 {TEMPLATE_MAPS[k].map(([f, c]) => (
                   <li key={f} className="flex justify-between gap-3 py-1.5">
                     <span>{f}</span>
-                    <span className={cn("shrink-0 text-xs font-medium", c === "UNCERTAIN" ? "text-warning" : "text-muted-foreground")}>{c === "UNCERTAIN" ? "! " : ""}{FIELD_CLASS_LABELS[c]}</span>
+                    <span
+                      className={cn(
+                        "shrink-0 text-xs font-medium",
+                        c === "UNCERTAIN" ? "text-warning" : "text-muted-foreground",
+                      )}
+                    >
+                      {c === "UNCERTAIN" ? "! " : ""}
+                      {FIELD_CLASS_LABELS[c]}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -69,7 +89,10 @@ function Templates() {
               <button
                 key={k}
                 onClick={() => setSettings({ ...settings, allergenFormat: k })}
-                className={cn("rounded-xl border p-3 text-left", settings.allergenFormat === k && "border-primary bg-accent")}
+                className={cn(
+                  "rounded-xl border p-3 text-left",
+                  settings.allergenFormat === k && "border-primary bg-accent",
+                )}
               >
                 <div className="text-sm font-medium">{l}</div>
                 <div className={cn("mt-1 text-sm", k !== "uppercase" && "font-bold")}>{ex}</div>
@@ -84,7 +107,9 @@ function Templates() {
               <p className="text-sm">
                 <b>{t.name}</b> · munkalap: {t.preferredSheet}
               </p>
-              <p className="mb-2 text-xs text-muted-foreground">Az oszlopokat a fejléc szövege alapján ismeri fel, nem fix cellapozíció alapján.</p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Az oszlopokat a fejléc szövege alapján ismeri fel, nem fix cellapozíció alapján.
+              </p>
               <ul className="divide-y text-sm">
                 {Object.entries(t.columns).map(([f, al]) => (
                   <li key={f} className="flex gap-3 py-1.5">

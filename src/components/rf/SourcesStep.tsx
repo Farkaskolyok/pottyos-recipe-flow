@@ -5,11 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LevelIcon, Panel } from "@/components/rf/ui";
 import { FileStatusBadge, RegBadge } from "@/components/rf/SourceBits";
 import type { CheckLevel, Product, TracedValue } from "@/lib/recipe/types";
-import { openSource, findConflicts, SOURCE_TYPE_LABELS, type ExtractedField, type RegStatus, type SourceFile, type SourceType } from "@/lib/recipe/sources";
+import {
+  openSource,
+  findConflicts,
+  SOURCE_TYPE_LABELS,
+  type ExtractedField,
+  type RegStatus,
+  type SourceFile,
+  type SourceType,
+} from "@/lib/recipe/sources";
 import { huNumber } from "@/lib/recipe/format";
 import { cn } from "@/lib/utils";
 
@@ -31,12 +45,20 @@ export function fieldTrace(f: SourceFile, x: ExtractedField): TracedValue {
     calculated: x.num ?? x.value,
     display,
     origin: "source",
-    source: { file: f.name, sheet: x.sheet ?? "—", cell: x.cell ?? "—", page: x.page, sourceType: SOURCE_TYPE_LABELS[f.sourceType], fileId: f.id },
+    source: {
+      file: f.name,
+      sheet: x.sheet ?? "—",
+      cell: x.cell ?? "—",
+      page: x.page,
+      sourceType: SOURCE_TYPE_LABELS[f.sourceType],
+      fileId: f.id,
+    },
     rule: x.method ? `Módszer: ${x.method}` : "Dokumentumból felismerve",
   };
 }
 
-const worst = (l: CheckLevel[]): CheckLevel => (l.includes("error") ? "error" : l.includes("warn") ? "warn" : "ok");
+const worst = (l: CheckLevel[]): CheckLevel =>
+  l.includes("error") ? "error" : l.includes("warn") ? "warn" : "ok";
 
 export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, onNext }: Props) {
   const files = p.files ?? [];
@@ -48,17 +70,30 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
   const now = () => new Date().toISOString();
   const audit = (text: string) => [...(p.audit ?? []), { at: now(), by: user, text }];
   const setFile = (id: string, patch: Partial<SourceFile>, note: string) =>
-    onChange({ ...p, files: files.map((f) => (f.id === id ? { ...f, ...patch } : f)), audit: audit(note) }, note);
+    onChange(
+      { ...p, files: files.map((f) => (f.id === id ? { ...f, ...patch } : f)), audit: audit(note) },
+      note,
+    );
   const ingName = (row?: number) => p.ingredients.find((i) => i.raw.row === row)?.raw.name ?? "—";
 
   const specs = files.filter((f) => f.sourceType !== "HISTORICAL_REFERENCE");
   const suggested = files.filter((f) => f.linkState === "suggested");
   const unknown = files.flatMap((f) => f.unknown.map((u) => ({ f, u })));
   const regs = files.flatMap((f) => f.regulatory.map((r) => ({ f, r })));
-  const quality = files.flatMap((f) => f.fields.filter((x) => x.key.startsWith("q.")).map((x) => ({ f, x })));
-  const storage = files.flatMap((f) => f.fields.filter((x) => ["storage_conditions", "transport_conditions", "shelf_life"].includes(x.key)).map((x) => ({ f, x })));
-  const allergens = files.flatMap((f) => f.fields.filter((x) => x.key === "allergens").map((x) => ({ f, x })));
-  const packaging = files.flatMap((f) => f.fields.filter((x) => /packaging/.test(x.key)).map((x) => ({ f, x })));
+  const quality = files.flatMap((f) =>
+    f.fields.filter((x) => x.key.startsWith("q.")).map((x) => ({ f, x })),
+  );
+  const storage = files.flatMap((f) =>
+    f.fields
+      .filter((x) => ["storage_conditions", "transport_conditions", "shelf_life"].includes(x.key))
+      .map((x) => ({ f, x })),
+  );
+  const allergens = files.flatMap((f) =>
+    f.fields.filter((x) => x.key === "allergens").map((x) => ({ f, x })),
+  );
+  const packaging = files.flatMap((f) =>
+    f.fields.filter((x) => /packaging/.test(x.key)).map((x) => ({ f, x })),
+  );
   const openConf = conflicts.filter((c) => !dec[c.id]);
 
   const lv = {
@@ -67,19 +102,39 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
     conf: openConf.length ? "error" : "ok",
     unk: unknown.some(({ u }) => !u.decision) ? "warn" : "ok",
     quality: quality.length ? "ok" : "warn",
-    reg: regs.some(({ r }) => r.status === "review") ? "error" : regs.some(({ r }) => r.status === "invalid") ? "warn" : "ok",
+    reg: regs.some(({ r }) => r.status === "review")
+      ? "error"
+      : regs.some(({ r }) => r.status === "invalid")
+        ? "warn"
+        : "ok",
   } as Record<string, CheckLevel>;
   const allOk = Object.values(lv).every((l) => l === "ok");
 
   const summary: [string, ReactNode][] = [
-    ["Recept", <LevelIcon key="r" level={p.ingredients.length ? "ok" : "error"} className="size-6" />],
-    [`${specs.length} alapanyag specifikáció`, <LevelIcon key="s" level={lv.files} className="size-6" />],
+    [
+      "Recept",
+      <LevelIcon key="r" level={p.ingredients.length ? "ok" : "error"} className="size-6" />,
+    ],
+    [
+      `${specs.length} alapanyag specifikáció`,
+      <LevelIcon key="s" level={lv.files} className="size-6" />,
+    ],
     ["Alapanyag-kapcsolatok", <LevelIcon key="l" level={lv.links} className="size-6" />],
     ["Minőségi paraméterek", <LevelIcon key="q" level={lv.quality} className="size-6" />],
     ["Jogszabályok", <LevelIcon key="j" level={lv.reg} className="size-6" />],
     ["Céges fix adatok", <LevelIcon key="c" level="ok" className="size-6" />],
-    ["Nem besorolt adatok", <span key="u" className="font-bold">{unknown.filter(({ u }) => !u.decision).length}</span>],
-    ["Ütköző értékek", <span key="k" className={cn("font-bold", openConf.length && "text-destructive")}>{openConf.length}</span>],
+    [
+      "Nem besorolt adatok",
+      <span key="u" className="font-bold">
+        {unknown.filter(({ u }) => !u.decision).length}
+      </span>,
+    ],
+    [
+      "Ütköző értékek",
+      <span key="k" className={cn("font-bold", openConf.length && "text-destructive")}>
+        {openConf.length}
+      </span>,
+    ],
   ];
 
   return (
@@ -95,7 +150,9 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
           ))}
         </ul>
         <div className="mt-5 flex justify-end">
-          <Button className="rounded-full px-6" onClick={onNext}>{allOk ? "DOKUMENTUMOK ELKÉSZÍTÉSE" : "ELLENŐRZÉS FOLYTATÁSA"}</Button>
+          <Button className="rounded-full px-6" onClick={onNext}>
+            {allOk ? "DOKUMENTUMOK ELKÉSZÍTÉSE" : "ELLENŐRZÉS FOLYTATÁSA"}
+          </Button>
         </div>
       </Panel>
 
@@ -110,10 +167,15 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
           </li>
           {files.map((f) => (
             <li key={f.id} className="flex items-center gap-2">
-              <button onClick={() => setOpenFile(f)} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm hover:bg-muted/60">
+              <button
+                onClick={() => setOpenFile(f)}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm hover:bg-muted/60"
+              >
                 <FileText className="size-4 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate font-medium">{f.name}</span>
-                <span className="hidden text-xs text-muted-foreground sm:inline">{SOURCE_TYPE_LABELS[f.sourceType]}</span>
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  {SOURCE_TYPE_LABELS[f.sourceType]}
+                </span>
                 <FileStatusBadge status={f.status} />
               </button>
               <OpenBtn id={f.id} />
@@ -128,17 +190,58 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
             {suggested.map((f) => (
               <li key={f.id} className="rounded-xl border p-3 text-sm">
                 <p className="font-medium">{f.name}</p>
-                <p className="mt-1 text-muted-foreground">Ez a dokumentum valószínűleg ehhez az alapanyaghoz tartozik:</p>
+                <p className="mt-1 text-muted-foreground">
+                  Ez a dokumentum valószínűleg ehhez az alapanyaghoz tartozik:
+                </p>
                 <p className="mt-1 font-semibold">{ingName(f.linkRow)}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button size="sm" className="rounded-full" onClick={() => setFile(f.id, { linkState: "linked" }, `Összekapcsolva: ${f.name} → ${ingName(f.linkRow)}`)}>Összekapcsolás</Button>
-                  <Select onValueChange={(v) => setFile(f.id, { linkState: "linked", linkRow: Number(v) }, `Összekapcsolva: ${f.name} → ${ingName(Number(v))}`)}>
-                    <SelectTrigger className="h-8 w-auto rounded-full text-xs"><SelectValue placeholder="Másik alapanyag kiválasztása" /></SelectTrigger>
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() =>
+                      setFile(
+                        f.id,
+                        { linkState: "linked" },
+                        `Összekapcsolva: ${f.name} → ${ingName(f.linkRow)}`,
+                      )
+                    }
+                  >
+                    Összekapcsolás
+                  </Button>
+                  <Select
+                    onValueChange={(v) =>
+                      setFile(
+                        f.id,
+                        { linkState: "linked", linkRow: Number(v) },
+                        `Összekapcsolva: ${f.name} → ${ingName(Number(v))}`,
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-auto rounded-full text-xs">
+                      <SelectValue placeholder="Másik alapanyag kiválasztása" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {p.ingredients.map((i) => <SelectItem key={i.raw.row} value={String(i.raw.row)}>{i.raw.name}</SelectItem>)}
+                      {p.ingredients.map((i) => (
+                        <SelectItem key={i.raw.row} value={String(i.raw.row)}>
+                          {i.raw.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" variant="ghost" className="rounded-full" onClick={() => setFile(f.id, { linkState: "rejected", linkRow: undefined }, `Nem kapcsolódik: ${f.name}`)}>Nem kapcsolódik</Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full"
+                    onClick={() =>
+                      setFile(
+                        f.id,
+                        { linkState: "rejected", linkRow: undefined },
+                        `Nem kapcsolódik: ${f.name}`,
+                      )
+                    }
+                  >
+                    Nem kapcsolódik
+                  </Button>
                 </div>
               </li>
             ))}
@@ -150,20 +253,40 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
-              <tr><th className="py-1.5 pr-3 font-medium">Alapanyag</th><th className="pr-3 font-medium">Recept</th><th className="pr-3 font-medium">Specifikáció</th><th className="font-medium">Állapot</th></tr>
+              <tr>
+                <th className="py-1.5 pr-3 font-medium">Alapanyag</th>
+                <th className="pr-3 font-medium">Recept</th>
+                <th className="pr-3 font-medium">Specifikáció</th>
+                <th className="font-medium">Állapot</th>
+              </tr>
             </thead>
             <tbody className="divide-y">
               {p.ingredients.map((i) => {
-                const linked = files.filter((f) => f.linkRow === i.raw.row && f.linkState === "linked");
-                const sug = files.some((f) => f.linkRow === i.raw.row && f.linkState === "suggested");
+                const linked = files.filter(
+                  (f) => f.linkRow === i.raw.row && f.linkState === "linked",
+                );
+                const sug = files.some(
+                  (f) => f.linkRow === i.raw.row && f.linkState === "suggested",
+                );
                 const conf = openConf.some((c) => c.row === i.raw.row);
                 const level: CheckLevel = conf ? "error" : sug || !linked.length ? "warn" : "ok";
                 return (
-                  <tr key={i.raw.row} className="cursor-pointer hover:bg-muted/50" onClick={() => setIngRow(i.raw.row)}>
+                  <tr
+                    key={i.raw.row}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setIngRow(i.raw.row)}
+                  >
                     <td className="py-2 pr-3 font-medium">{i.raw.name}</td>
-                    <td className="max-w-[10rem] truncate pr-3 text-muted-foreground">{p.raw.fileName}</td>
-                    <td className="max-w-[14rem] truncate pr-3 text-muted-foreground">{linked.map((f) => f.name).join(", ") || (sug ? "javaslat vár döntésre" : "—")}</td>
-                    <td><LevelIcon level={level} className="size-6" /></td>
+                    <td className="max-w-[10rem] truncate pr-3 text-muted-foreground">
+                      {p.raw.fileName}
+                    </td>
+                    <td className="max-w-[14rem] truncate pr-3 text-muted-foreground">
+                      {linked.map((f) => f.name).join(", ") ||
+                        (sug ? "javaslat vár döntésre" : "—")}
+                    </td>
+                    <td>
+                      <LevelIcon level={level} className="size-6" />
+                    </td>
                   </tr>
                 );
               })}
@@ -179,24 +302,81 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
               const d = dec[c.id];
               const choose = (choice: "recipe" | "spec" | "manual", value: number) =>
                 onChange(
-                  { ...p, conflictDecisions: { ...dec, [c.id]: { choice, value, by: user, at: now() } }, audit: audit(`Ütközés feloldva (${c.ingredient} – ${c.label}): ${choice === "recipe" ? "recept" : choice === "spec" ? "specifikáció" : "kézi érték"} ${value}`) },
+                  {
+                    ...p,
+                    conflictDecisions: { ...dec, [c.id]: { choice, value, by: user, at: now() } },
+                    audit: audit(
+                      `Ütközés feloldva (${c.ingredient} – ${c.label}): ${choice === "recipe" ? "recept" : choice === "spec" ? "specifikáció" : "kézi érték"} ${value}`,
+                    ),
+                  },
                   `Ütközés feloldva: ${c.ingredient} – ${c.label}`,
                 );
               return (
                 <li key={c.id} className="rounded-xl border p-3 text-sm">
-                  <p className="font-semibold">{c.label} <span className="font-normal text-muted-foreground">· {c.ingredient}</span></p>
+                  <p className="font-semibold">
+                    {c.label}{" "}
+                    <span className="font-normal text-muted-foreground">· {c.ingredient}</span>
+                  </p>
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-muted p-2"><p className="text-xs text-muted-foreground">Recept ({c.recipeCell ?? "—"})</p><p className="font-bold">{huNumber(c.recipe, 2)} g</p></div>
-                    <div className="rounded-lg bg-muted p-2"><p className="text-xs text-muted-foreground">Beszállítói specifikáció{c.field.page ? ` (${c.field.page}. oldal)` : ""}</p><p className="font-bold">{huNumber(c.spec, 2)} g</p></div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-xs text-muted-foreground">
+                        Recept ({c.recipeCell ?? "—"})
+                      </p>
+                      <p className="font-bold">{huNumber(c.recipe, 2)} g</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-xs text-muted-foreground">
+                        Beszállítói specifikáció{c.field.page ? ` (${c.field.page}. oldal)` : ""}
+                      </p>
+                      <p className="font-bold">{huNumber(c.spec, 2)} g</p>
+                    </div>
                   </div>
                   {d ? (
-                    <p className="mt-2 text-xs text-muted-foreground">Döntés: {d.choice === "recipe" ? "Recept" : d.choice === "spec" ? "Specifikáció" : "Kézi érték"} ({huNumber(d.value, 2)} g) · {d.by}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Döntés:{" "}
+                      {d.choice === "recipe"
+                        ? "Recept"
+                        : d.choice === "spec"
+                          ? "Specifikáció"
+                          : "Kézi érték"}{" "}
+                      ({huNumber(d.value, 2)} g) · {d.by}
+                    </p>
                   ) : (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => choose("recipe", c.recipe)}>Recept használata</Button>
-                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => choose("spec", c.spec)}>Specifikáció használata</Button>
-                      <Input className="h-8 w-24" placeholder="érték" value={manual[c.id] ?? ""} onChange={(e) => setManual({ ...manual, [c.id]: e.target.value })} />
-                      <Button size="sm" variant="ghost" className="rounded-full" disabled={!Number.isFinite(Number((manual[c.id] ?? "").replace(",", "."))) || !manual[c.id]} onClick={() => choose("manual", Number(manual[c.id].replace(",", ".")))}>Kézi érték megadása</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => choose("recipe", c.recipe)}
+                      >
+                        Recept használata
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => choose("spec", c.spec)}
+                      >
+                        Specifikáció használata
+                      </Button>
+                      <Input
+                        className="h-8 w-24"
+                        placeholder="érték"
+                        value={manual[c.id] ?? ""}
+                        onChange={(e) => setManual({ ...manual, [c.id]: e.target.value })}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full"
+                        disabled={
+                          !Number.isFinite(Number((manual[c.id] ?? "").replace(",", "."))) ||
+                          !manual[c.id]
+                        }
+                        onClick={() => choose("manual", Number(manual[c.id].replace(",", ".")))}
+                      >
+                        Kézi érték megadása
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -211,21 +391,71 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
           <ul className="space-y-3">
             {unknown.map(({ f, u }) => {
               const act = (action: "field" | "newField" | "note" | "ignore", label: string) =>
-                setFile(f.id, { unknown: f.unknown.map((x) => (x.id === u.id ? { ...x, decision: { action, by: user, at: now() } } : x)) }, `Nem besorolt adat: ${label}`);
+                setFile(
+                  f.id,
+                  {
+                    unknown: f.unknown.map((x) =>
+                      x.id === u.id ? { ...x, decision: { action, by: user, at: now() } } : x,
+                    ),
+                  },
+                  `Nem besorolt adat: ${label}`,
+                );
               return (
                 <li key={u.id} className="rounded-xl border p-3 text-sm">
                   <p className="font-medium">“{u.text}”</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{f.name}{u.page ? ` · ${u.page}. oldal` : ""} · Dokumentumból felismerve</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {f.name}
+                    {u.page ? ` · ${u.page}. oldal` : ""} · Dokumentumból felismerve
+                  </p>
                   {u.decision ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {{ field: "Meglévő mezőhöz besorolva", newField: "Új mezőtípusként rögzítve", note: "Belső megjegyzésként megtartva", ignore: "Figyelmen kívül hagyva" }[u.decision.action]} · {u.decision.by}
+                      {
+                        {
+                          field: "Meglévő mezőhöz besorolva",
+                          newField: "Új mezőtípusként rögzítve",
+                          note: "Belső megjegyzésként megtartva",
+                          ignore: "Figyelmen kívül hagyva",
+                        }[u.decision.action]
+                      }{" "}
+                      · {u.decision.by}
                     </p>
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => act("field", "besorolás meglévő mezőhöz")}>Besorolás meglévő mezőhöz</Button>
-                      <Button size="sm" variant="outline" className="rounded-full" disabled={!admin} onClick={() => act("newField", "új mezőtípus")}>Új mezőtípus létrehozása</Button>
-                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => act("note", "belső megjegyzés")}>Belső megjegyzésként megtartás</Button>
-                      <Button size="sm" variant="ghost" className="rounded-full" disabled={!admin} title={admin ? undefined : "Csak jogosult felhasználó"} onClick={() => act("ignore", "figyelmen kívül hagyva")}>Figyelmen kívül hagyás</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => act("field", "besorolás meglévő mezőhöz")}
+                      >
+                        Besorolás meglévő mezőhöz
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        disabled={!admin}
+                        onClick={() => act("newField", "új mezőtípus")}
+                      >
+                        Új mezőtípus létrehozása
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => act("note", "belső megjegyzés")}
+                      >
+                        Belső megjegyzésként megtartás
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full"
+                        disabled={!admin}
+                        title={admin ? undefined : "Csak jogosult felhasználó"}
+                        onClick={() => act("ignore", "figyelmen kívül hagyva")}
+                      >
+                        Figyelmen kívül hagyás
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -240,34 +470,59 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground">
-                <tr><th className="py-1.5 pr-3 font-medium">Paraméter</th><th className="pr-3 font-medium">Érték</th><th className="pr-3 font-medium">Tűrés</th><th className="pr-3 font-medium">Módszer</th><th className="font-medium">Forrás</th></tr>
+                <tr>
+                  <th className="py-1.5 pr-3 font-medium">Paraméter</th>
+                  <th className="pr-3 font-medium">Érték</th>
+                  <th className="pr-3 font-medium">Tűrés</th>
+                  <th className="pr-3 font-medium">Módszer</th>
+                  <th className="font-medium">Forrás</th>
+                </tr>
               </thead>
               <tbody className="divide-y">
                 {quality.map(({ f, x }, i) => (
-                  <tr key={i} className="cursor-pointer hover:bg-muted/50" onClick={() => onTrace(x.key, fieldTrace(f, x))}>
+                  <tr
+                    key={i}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => onTrace(x.key, fieldTrace(f, x))}
+                  >
                     <td className="py-2 pr-3 font-medium">{x.label}</td>
-                    <td className="pr-3">{x.value} {x.unit}</td>
+                    <td className="pr-3">
+                      {x.value} {x.unit}
+                    </td>
                     <td className="pr-3">{x.tolerance ?? "—"}</td>
                     <td className="pr-3 text-muted-foreground">{x.method ?? "—"}</td>
-                    <td className="max-w-[12rem] truncate text-xs text-muted-foreground">{ingName(f.linkRow)}</td>
+                    <td className="max-w-[12rem] truncate text-xs text-muted-foreground">
+                      {ingName(f.linkRow)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Nincs minőségi paraméter a specifikációkban.</p>
+          <p className="text-sm text-muted-foreground">
+            Nincs minőségi paraméter a specifikációkban.
+          </p>
         )}
       </Block>
 
       <FieldBlock title="Allergének" items={allergens} onTrace={onTrace} ingName={ingName} />
       <FieldBlock title="Tárolás / szállítás" items={storage} onTrace={onTrace} ingName={ingName} />
-      <FieldBlock title="Csomagolás" items={packaging} onTrace={onTrace} ingName={ingName} empty="A specifikációk nem tartalmaznak csomagolási adatot." />
+      <FieldBlock
+        title="Csomagolás"
+        items={packaging}
+        onTrace={onTrace}
+        ingName={ingName}
+        empty="A specifikációk nem tartalmaznak csomagolási adatot."
+      />
 
       <Block title="Céges fix adatok" level="ok">
         <ul className="divide-y text-sm">
           {companyFixed.map((c) => (
-            <li key={c.label} className="flex justify-between gap-3 py-2"><span className="text-muted-foreground">{c.label}</span><span className="font-medium">{c.value}</span></li>
+            <li key={c.label} className="flex justify-between gap-3 py-2">
+              <span className="text-muted-foreground">{c.label}</span>
+              <span className="font-medium">{c.value}</span>
+            </li>
           ))}
         </ul>
       </Block>
@@ -276,12 +531,43 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
         {regs.length ? (
           <ul className="space-y-2">
             {regs.map(({ f, r }) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2 text-sm">
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2 text-sm"
+              >
                 <span className="w-32 font-semibold">{r.identifier}</span>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={r.original}>{f.name}{r.page ? ` · ${r.page}. oldal` : ""}</span>
+                <span
+                  className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+                  title={r.original}
+                >
+                  {f.name}
+                  {r.page ? ` · ${r.page}. oldal` : ""}
+                </span>
                 {admin ? (
-                  <Select value={r.status} onValueChange={(v) => setFile(f.id, { regulatory: f.regulatory.map((x) => (x.id === r.id ? { ...x, status: v as RegStatus, reviewedAt: now(), reviewedBy: user } : x)) }, `Jogszabályi hivatkozás: ${r.identifier} → ${v}`)}>
-                    <SelectTrigger className="h-8 w-auto border-none bg-transparent p-0 shadow-none"><RegBadge status={r.status} /></SelectTrigger>
+                  <Select
+                    value={r.status}
+                    onValueChange={(v) =>
+                      setFile(
+                        f.id,
+                        {
+                          regulatory: f.regulatory.map((x) =>
+                            x.id === r.id
+                              ? {
+                                  ...x,
+                                  status: v as RegStatus,
+                                  reviewedAt: now(),
+                                  reviewedBy: user,
+                                }
+                              : x,
+                          ),
+                        },
+                        `Jogszabályi hivatkozás: ${r.identifier} → ${v}`,
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-auto border-none bg-transparent p-0 shadow-none">
+                      <RegBadge status={r.status} />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ok">✓ Ellenőrzött</SelectItem>
                       <SelectItem value="review">! Ellenőrzendő</SelectItem>
@@ -295,44 +581,92 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Nincs jogszabályi hivatkozás a dokumentumokban.</p>
+          <p className="text-sm text-muted-foreground">
+            Nincs jogszabályi hivatkozás a dokumentumokban.
+          </p>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">A régi specifikációkban szereplő hivatkozások nem tekinthetők automatikusan hatályosnak. A jogszabályi szöveg nem frissül automatikusan.</p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          A régi specifikációkban szereplő hivatkozások nem tekinthetők automatikusan hatályosnak. A
+          jogszabályi szöveg nem frissül automatikusan.
+        </p>
       </Block>
 
       {(p.audit?.length ?? 0) > 0 && (
         <Panel>
           <h2 className="mb-3 font-bold">Döntési napló</h2>
           <ul className="space-y-1 text-xs text-muted-foreground">
-            {[...(p.audit ?? [])].reverse().slice(0, 12).map((a, i) => <li key={i}>{new Date(a.at).toLocaleString("hu-HU")} · {a.by} · {a.text}</li>)}
+            {[...(p.audit ?? [])]
+              .reverse()
+              .slice(0, 12)
+              .map((a, i) => (
+                <li key={i}>
+                  {new Date(a.at).toLocaleString("hu-HU")} · {a.by} · {a.text}
+                </li>
+              ))}
           </ul>
         </Panel>
       )}
 
       <Dialog open={!!openFile} onOpenChange={(o) => !o && setOpenFile(null)}>
         <DialogContent>
-          {openFile && (() => {
-            const f = files.find((x) => x.id === openFile.id) ?? openFile;
-            return (
-              <>
-                <DialogHeader><DialogTitle className="break-all pr-6">{f.name}</DialogTitle></DialogHeader>
-                <dl className="divide-y rounded-xl border text-sm">
-                  <Row k="Dokumentum típusa">
-                    <Select value={f.sourceType} onValueChange={(v) => setFile(f.id, { sourceType: v as SourceType }, `Forrástípus módosítva: ${f.name}`)}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>{(Object.keys(SOURCE_TYPE_LABELS) as SourceType[]).filter((t) => t !== "RECIPE").map((t) => <SelectItem key={t} value={t}>{SOURCE_TYPE_LABELS[t]}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Row>
-                  <Row k="Azonosított anyag">{f.detectedMaterial ?? "—"}</Row>
-                  <Row k="Kapcsolt alapanyag">{f.linkState === "linked" ? ingName(f.linkRow) : f.linkState === "suggested" ? `javaslat: ${ingName(f.linkRow)}` : "—"}</Row>
-                  <Row k="Kinyert mezők">{f.fields.length}</Row>
-                  <Row k="Jogszabályi hivatkozás">{f.regulatory.length}</Row>
-                  <Row k="Állapot"><FileStatusBadge status={f.status} /></Row>
-                </dl>
-                {f.warnings.length > 0 && <ul className="rounded-xl bg-warning-soft p-3 text-sm">{f.warnings.map((w) => <li key={w}>! {w}</li>)}</ul>}
-              </>
-            );
-          })()}
+          {openFile &&
+            (() => {
+              const f = files.find((x) => x.id === openFile.id) ?? openFile;
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="break-all pr-6">{f.name}</DialogTitle>
+                  </DialogHeader>
+                  <dl className="divide-y rounded-xl border text-sm">
+                    <Row k="Dokumentum típusa">
+                      <Select
+                        value={f.sourceType}
+                        onValueChange={(v) =>
+                          setFile(
+                            f.id,
+                            { sourceType: v as SourceType },
+                            `Forrástípus módosítva: ${f.name}`,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(SOURCE_TYPE_LABELS) as SourceType[])
+                            .filter((t) => t !== "RECIPE")
+                            .map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {SOURCE_TYPE_LABELS[t]}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </Row>
+                    <Row k="Azonosított anyag">{f.detectedMaterial ?? "—"}</Row>
+                    <Row k="Kapcsolt alapanyag">
+                      {f.linkState === "linked"
+                        ? ingName(f.linkRow)
+                        : f.linkState === "suggested"
+                          ? `javaslat: ${ingName(f.linkRow)}`
+                          : "—"}
+                    </Row>
+                    <Row k="Kinyert mezők">{f.fields.length}</Row>
+                    <Row k="Jogszabályi hivatkozás">{f.regulatory.length}</Row>
+                    <Row k="Állapot">
+                      <FileStatusBadge status={f.status} />
+                    </Row>
+                  </dl>
+                  {f.warnings.length > 0 && (
+                    <ul className="rounded-xl bg-warning-soft p-3 text-sm">
+                      {f.warnings.map((w) => (
+                        <li key={w}>! {w}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              );
+            })()}
         </DialogContent>
       </Dialog>
 
@@ -340,39 +674,65 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           {ingRow != null && (
             <>
-              <SheetHeader><SheetTitle className="uppercase">{ingName(ingRow)}</SheetTitle></SheetHeader>
+              <SheetHeader>
+                <SheetTitle className="uppercase">{ingName(ingRow)}</SheetTitle>
+              </SheetHeader>
               <p className="mt-2 text-sm text-muted-foreground">Recept: {p.raw.fileName}</p>
-              {files.filter((f) => f.linkRow === ingRow && f.linkState === "linked").map((f) => (
-                <div key={f.id} className="mt-4">
-                  <p className="text-sm">Specifikáció: <b>{f.name}</b></p>
-                  {SECTIONS.map(([title, test]) => {
-                    const items = f.fields.filter((x) => test(x.key));
-                    if (!items.length) return null;
-                    return (
-                      <div key={title} className="mt-4">
-                        <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{title}</h3>
-                        <ul className="divide-y rounded-xl border text-sm">
-                          {items.map((x) => (
-                            <li key={x.key}>
-                              <button className="flex w-full justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50" onClick={() => onTrace(x.key, fieldTrace(f, x))}>
-                                <span className="text-muted-foreground">{x.label}</span>
-                                <span className="text-right font-medium">{x.value} {x.unit} {x.tolerance}</span>
-                              </button>
+              {files
+                .filter((f) => f.linkRow === ingRow && f.linkState === "linked")
+                .map((f) => (
+                  <div key={f.id} className="mt-4">
+                    <p className="text-sm">
+                      Specifikáció: <b>{f.name}</b>
+                    </p>
+                    {SECTIONS.map(([title, test]) => {
+                      const items = f.fields.filter((x) => test(x.key));
+                      if (!items.length) return null;
+                      return (
+                        <div key={title} className="mt-4">
+                          <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            {title}
+                          </h3>
+                          <ul className="divide-y rounded-xl border text-sm">
+                            {items.map((x) => (
+                              <li key={x.key}>
+                                <button
+                                  className="flex w-full justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
+                                  onClick={() => onTrace(x.key, fieldTrace(f, x))}
+                                >
+                                  <span className="text-muted-foreground">{x.label}</span>
+                                  <span className="text-right font-medium">
+                                    {x.value} {x.unit} {x.tolerance}
+                                  </span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                    {f.regulatory.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          Jogszabályok
+                        </h3>
+                        <ul className="space-y-1 text-sm">
+                          {f.regulatory.map((r) => (
+                            <li key={r.id} className="flex justify-between">
+                              <span>{r.identifier}</span>
+                              <RegBadge status={r.status} />
                             </li>
                           ))}
                         </ul>
                       </div>
-                    );
-                  })}
-                  {f.regulatory.length > 0 && (
-                    <div className="mt-4">
-                      <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Jogszabályok</h3>
-                      <ul className="space-y-1 text-sm">{f.regulatory.map((r) => <li key={r.id} className="flex justify-between"><span>{r.identifier}</span><RegBadge status={r.status} /></li>)}</ul>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!files.some((f) => f.linkRow === ingRow && f.linkState === "linked") && <p className="mt-6 text-sm text-muted-foreground">Ehhez az alapanyaghoz nincs kapcsolt specifikáció.</p>}
+                    )}
+                  </div>
+                ))}
+              {!files.some((f) => f.linkRow === ingRow && f.linkState === "linked") && (
+                <p className="mt-6 text-sm text-muted-foreground">
+                  Ehhez az alapanyaghoz nincs kapcsolt specifikáció.
+                </p>
+              )}
             </>
           )}
         </SheetContent>
@@ -383,7 +743,10 @@ export function SourcesStep({ p, admin, user, companyFixed, onChange, onTrace, o
 
 const SECTIONS: [string, (k: string) => boolean][] = [
   ["Általános adatok", (k) => ["product_description", "origin", "recommended_use"].includes(k)],
-  ["Beszállító", (k) => ["supplier", "manufacturer", "address", "telephone", "email", "contact"].includes(k)],
+  [
+    "Beszállító",
+    (k) => ["supplier", "manufacturer", "address", "telephone", "email", "contact"].includes(k),
+  ],
   ["Összetétel", (k) => ["composition", "allergens"].includes(k)],
   ["Tápérték", (k) => k.startsWith("n.")],
   ["Tárolás", (k) => ["storage_conditions", "shelf_life"].includes(k)],
@@ -401,32 +764,60 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
   );
 }
 
-function Block({ title, level, children }: { title: string; level: CheckLevel; children: ReactNode }) {
+function Block({
+  title,
+  level,
+  children,
+}: {
+  title: string;
+  level: CheckLevel;
+  children: ReactNode;
+}) {
   return (
     <div data-anchor={title} className="rounded-2xl">
-    <Panel>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-bold uppercase tracking-wide">{title}</h2>
-        <LevelIcon level={level} className="size-6" />
-      </div>
-      {children}
-    </Panel>
+      <Panel>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-bold uppercase tracking-wide">{title}</h2>
+          <LevelIcon level={level} className="size-6" />
+        </div>
+        {children}
+      </Panel>
     </div>
   );
 }
 
-function FieldBlock({ title, items, onTrace, ingName, empty }: { title: string; items: { f: SourceFile; x: ExtractedField }[]; onTrace: Props["onTrace"]; ingName: (r?: number) => string; empty?: string }) {
+function FieldBlock({
+  title,
+  items,
+  onTrace,
+  ingName,
+  empty,
+}: {
+  title: string;
+  items: { f: SourceFile; x: ExtractedField }[];
+  onTrace: Props["onTrace"];
+  ingName: (r?: number) => string;
+  empty?: string;
+}) {
   return (
     <Block title={title} level={items.length ? "ok" : "warn"}>
       {items.length ? (
         <ul className="divide-y text-sm">
           {items.map(({ f, x }, i) => (
             <li key={i}>
-              <button className="flex w-full flex-wrap items-baseline justify-between gap-x-3 py-2 text-left hover:bg-muted/40" onClick={() => onTrace(x.key, fieldTrace(f, x))}>
-                <span><span className="font-medium">{x.label}</span> <span className="text-xs text-muted-foreground">· {ingName(f.linkRow)}</span></span>
+              <button
+                className="flex w-full flex-wrap items-baseline justify-between gap-x-3 py-2 text-left hover:bg-muted/40"
+                onClick={() => onTrace(x.key, fieldTrace(f, x))}
+              >
+                <span>
+                  <span className="font-medium">{x.label}</span>{" "}
+                  <span className="text-xs text-muted-foreground">· {ingName(f.linkRow)}</span>
+                </span>
                 <span className="text-right">
                   {x.value}
-                  <span className="block text-[11px] text-muted-foreground">Forrás: {SOURCE_TYPE_LABELS[f.sourceType].toLowerCase()}</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Forrás: {SOURCE_TYPE_LABELS[f.sourceType].toLowerCase()}
+                  </span>
                 </span>
               </button>
             </li>

@@ -11,7 +11,8 @@ import { blockingFor, fixTarget, stepCounters } from "@/lib/recipe/fixes";
 
 const dict = DEMO_DICTIONARY;
 const S = DEFAULT_SETTINGS;
-const product = (i = 0) => newProduct(parseWorkbook(buildDemoWorkbook(DEMO_RECIPES[i]), "t.xlsx", 1000), dict, "Teszt");
+const product = (i = 0) =>
+  newProduct(parseWorkbook(buildDemoWorkbook(DEMO_RECIPES[i]), "t.xlsx", 1000), dict, "Teszt");
 
 describe("XLS/XLSX parsing", () => {
   it("reads ingredients from a real xlsx round-trip", () => {
@@ -21,7 +22,10 @@ describe("XLS/XLSX parsing", () => {
     expect(raw.ingredients[0].name).toBe("TURO_40");
   });
   it("reads legacy xls (biff8) too", () => {
-    const buf = XLSX.write(buildDemoWorkbook(DEMO_RECIPES[0]), { type: "array", bookType: "biff8" });
+    const buf = XLSX.write(buildDemoWorkbook(DEMO_RECIPES[0]), {
+      type: "array",
+      bookType: "biff8",
+    });
     const raw = parseWorkbook(XLSX.read(buf, { type: "array" }), "a.xls", 1);
     expect(raw.ingredients.length).toBe(DEMO_RECIPES[0].rows.length);
   });
@@ -52,7 +56,10 @@ describe("per-serving calculation", () => {
 describe("ingredient dictionary matching", () => {
   it("exact, fuzzy and unknown", () => {
     expect(matchIngredient("Kristálycukor", undefined, dict).status).toBe("recognized");
-    expect(matchIngredient("Teljesen ismeretlen XYZ", undefined, dict)).toEqual({ status: "unknown", entryId: null });
+    expect(matchIngredient("Teljesen ismeretlen XYZ", undefined, dict)).toEqual({
+      status: "unknown",
+      entryId: null,
+    });
   });
   it("unknown ingredient blocks with an error and a fix target", () => {
     const p = product();
@@ -70,7 +77,10 @@ describe("product package", () => {
     const p = pkg();
     expect(p.files!.some((f) => f.linkState === "linked")).toBe(true);
     expect(p.files!.some((f) => f.linkState === "suggested")).toBe(true);
-    const relinked = applyLinkSuggestions(demoSpecFiles(), p.ingredients.map((i) => ({ row: i.raw.row, name: i.raw.name })));
+    const relinked = applyLinkSuggestions(
+      demoSpecFiles(),
+      p.ingredients.map((i) => ({ row: i.raw.row, name: i.raw.name })),
+    );
     expect(relinked.filter((f) => f.linkState === "linked").length).toBeGreaterThan(0);
   });
   it("detects value conflicts and blocks until decided", () => {
@@ -89,7 +99,10 @@ describe("product package", () => {
     const reg = ds.checks.find((c) => c.id === "src-reg")!;
     expect(reg.level).toBe("error");
     expect(fixTarget(reg)).toMatchObject({ step: "Források", label: "ELLENŐRZÉS" });
-    p.files = p.files!.map((f) => ({ ...f, regulatory: f.regulatory.map((r) => ({ ...r, status: "ok" as const })) }));
+    p.files = p.files!.map((f) => ({
+      ...f,
+      regulatory: f.regulatory.map((r) => ({ ...r, status: "ok" as const })),
+    }));
     expect(buildDataset(p, dict, S).checks.find((c) => c.id === "src-reg")).toBeUndefined();
   });
 });
@@ -128,7 +141,13 @@ describe("documents", () => {
     expect(Object.keys(docs).sort()).toEqual(["pack", "sheet", "spec"]);
     expect(docs.sheet.blocks.length).toBeGreaterThan(0);
     expect(crossCheck(docs)).toEqual([]);
-    const bad = { ...docs, spec: { ...docs.spec, used: { ...docs.spec.used, [Object.keys(docs.sheet.used)[0]]: "ELTÉR" } } };
+    const bad = {
+      ...docs,
+      spec: {
+        ...docs.spec,
+        used: { ...docs.spec.used, [Object.keys(docs.sheet.used)[0]]: "ELTÉR" },
+      },
+    };
     expect(crossCheck(bad).length).toBe(1);
   });
 });

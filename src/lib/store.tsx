@@ -1,5 +1,13 @@
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import type { DictionaryEntry, Product } from "./recipe/types";
 import { DEMO_DICTIONARY } from "./recipe/dictionary";
 import { DEFAULT_SETTINGS, type Settings } from "./recipe/engine";
@@ -53,7 +61,14 @@ function initial(): State {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>({ products: [], dictionary: DEMO_DICTIONARY, settings: DEFAULT_SETTINGS, rules: DEFAULT_RULES, admin: true, categories: DEFAULT_CATEGORIES });
+  const [state, setState] = useState<State>({
+    products: [],
+    dictionary: DEMO_DICTIONARY,
+    settings: DEFAULT_SETTINGS,
+    rules: DEFAULT_RULES,
+    admin: true,
+    categories: DEFAULT_CATEGORIES,
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -73,9 +88,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       let next: State = base;
       if (saved?.products && saved.dictionary) {
         const sd = saved.dictionary;
-        const dictionary: DictionaryEntry[] = [...sd, ...DEMO_DICTIONARY.filter((d) => !sd.some((x) => x.id === d.id))];
-        const products: Product[] = saved.products.some((p) => p.files?.length) ? saved.products : [demoPackageProduct(dictionary, base.settings.userName), ...saved.products];
-        next = { ...base, ...saved, dictionary, products, settings: { ...base.settings, ...saved.settings }, categories: { ...base.categories, ...saved.categories } } as State;
+        const dictionary: DictionaryEntry[] = [
+          ...sd,
+          ...DEMO_DICTIONARY.filter((d) => !sd.some((x) => x.id === d.id)),
+        ];
+        const products: Product[] = saved.products.some((p) => p.files?.length)
+          ? saved.products
+          : [demoPackageProduct(dictionary, base.settings.userName), ...saved.products];
+        next = {
+          ...base,
+          ...saved,
+          dictionary,
+          products,
+          settings: { ...base.settings, ...saved.settings },
+          categories: { ...base.categories, ...saved.categories },
+        } as State;
       }
       if (!alive) return;
       setState(next);
@@ -104,7 +131,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       const exists = s.products.some((x) => x.id === p.id);
       const next = { ...p, updatedAt: new Date().toISOString() };
-      return { ...s, products: exists ? s.products.map((x) => (x.id === p.id ? next : x)) : [next, ...s.products] };
+      return {
+        ...s,
+        products: exists
+          ? s.products.map((x) => (x.id === p.id ? next : x))
+          : [next, ...s.products],
+      };
     });
   }, []);
 
@@ -113,12 +145,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...state,
       ready,
       upsertProduct,
-      removeProduct: (id) => setState((s) => ({ ...s, products: s.products.filter((p) => p.id !== id) })),
+      removeProduct: (id) =>
+        setState((s) => ({ ...s, products: s.products.filter((p) => p.id !== id) })),
       getProduct: (id) => state.products.find((p) => p.id === id),
       upsertEntry: (e) =>
         setState((s) => ({
           ...s,
-          dictionary: s.dictionary.some((x) => x.id === e.id) ? s.dictionary.map((x) => (x.id === e.id ? e : x)) : [...s.dictionary, e],
+          dictionary: s.dictionary.some((x) => x.id === e.id)
+            ? s.dictionary.map((x) => (x.id === e.id ? e : x))
+            : [...s.dictionary, e],
         })),
       setSettings: (settings) => setState((s) => ({ ...s, settings })),
       setRules: (rules) => setState((s) => ({ ...s, rules })),
@@ -127,7 +162,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addCategory: (id, value) =>
         setState((s) => ({
           ...s,
-          categories: { ...s.categories, [id]: { ...s.categories[id], options: [...new Set([...(s.categories[id]?.options ?? []), value])] } },
+          categories: {
+            ...s.categories,
+            [id]: {
+              ...s.categories[id],
+              options: [...new Set([...(s.categories[id]?.options ?? []), value])],
+            },
+          },
         })),
     }),
     [state, ready, upsertProduct],

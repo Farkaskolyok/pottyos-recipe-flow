@@ -1,7 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Pencil, Check, X, Lock, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -24,7 +31,12 @@ const Ctx = createContext<EditApi | null>(null);
 export const EditProvider = Ctx.Provider;
 
 function parseNum(s: string): number | null {
-  const n = Number(s.replace(/\s/g, "").replace(",", ".").replace(/[^0-9.\-]/g, ""));
+  const n = Number(
+    s
+      .replace(/\s/g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.\-]/g, ""),
+  );
   return s.trim() && Number.isFinite(n) ? n : null;
 }
 function fmtNum(n: number) {
@@ -62,21 +74,22 @@ export function InlineField({
   if (!api || !v) return <>{children ?? v?.display ?? emptyText}</>;
   const editable = canEdit(def, admin);
   const locked = !editable && def.kind === "regulatory";
-  const shown = children ?? (v.display || <span className="text-muted-foreground">{emptyText}</span>);
+  const shown =
+    children ?? (v.display || <span className="text-muted-foreground">{emptyText}</span>);
 
   if (editing)
     return (
       <span data-anchor={`field:${fieldKey}`} className={block ? "block" : "inline-block"}>
-      <Editor
-        def={def}
-        v={v}
-        block={block}
-        onCancel={() => setEditing(false)}
-        onSave={(val, note, scope) => {
-          api.set(fieldKey, val, note, scope);
-          setEditing(false);
-        }}
-      />
+        <Editor
+          def={def}
+          v={v}
+          block={block}
+          onCancel={() => setEditing(false)}
+          onSave={(val, note, scope) => {
+            api.set(fieldKey, val, note, scope);
+            setEditing(false);
+          }}
+        />
       </span>
     );
 
@@ -90,11 +103,22 @@ export function InlineField({
           title="Érték módosítása"
           className="relative inline-flex shrink-0 items-center justify-center text-muted-foreground/50 transition-colors after:absolute after:-inset-3 after:content-[''] hover:text-primary focus-visible:text-primary group-hover/f:text-muted-foreground"
         >
-          {def.editType === "DROPDOWN" ? <span className="text-[10px] leading-none">▾</span> : <Pencil className="size-3" />}
+          {def.editType === "DROPDOWN" ? (
+            <span className="text-[10px] leading-none">▾</span>
+          ) : (
+            <Pencil className="size-3" />
+          )}
         </button>
       )}
-      {locked && <Lock className="size-3 shrink-0 text-muted-foreground/60" aria-label="Jogszabályhoz kötött mező" />}
-      {v.origin === "manual" && v.manual && <ModifiedMark v={v} onRestore={() => api.restore(fieldKey)} />}
+      {locked && (
+        <Lock
+          className="size-3 shrink-0 text-muted-foreground/60"
+          aria-label="Jogszabályhoz kötött mező"
+        />
+      )}
+      {v.origin === "manual" && v.manual && (
+        <ModifiedMark v={v} onRestore={() => api.restore(fieldKey)} />
+      )}
     </>
   );
 
@@ -106,7 +130,10 @@ export function InlineField({
       </div>
     );
   return (
-    <span data-anchor={`field:${fieldKey}`} className={cn("group/f inline-flex flex-wrap items-baseline gap-x-1.5", className)}>
+    <span
+      data-anchor={`field:${fieldKey}`}
+      className={cn("group/f inline-flex flex-wrap items-baseline gap-x-1.5", className)}
+    >
       {def.editType === "DROPDOWN" && editable ? (
         <button type="button" className="text-left" onClick={() => setEditing(true)}>
           {shown}
@@ -136,9 +163,14 @@ function ModifiedMark({ v, onRestore }: { v: TracedValue; onRestore: () => void 
             ["Eredeti érték", m.previous || "—"],
             ["Új érték", v.display],
             ["Módosította", m.by],
-            ["Dátum", `${huDate(m.at)} ${new Date(m.at).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}`],
+            [
+              "Dátum",
+              `${huDate(m.at)} ${new Date(m.at).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" })}`,
+            ],
             ...(m.note ? [["Megjegyzés", m.note]] : []),
-            ...(v.source ? [["Forrás", `${v.source.file} · ${v.source.sheet} / ${v.source.cell}`]] : []),
+            ...(v.source
+              ? [["Forrás", `${v.source.file} · ${v.source.sheet} / ${v.source.cell}`]]
+              : []),
             ...(v.original != null && v.source ? [["Nyers érték", String(v.original)]] : []),
           ].map(([k, x]) => (
             <div key={k} className="flex gap-2">
@@ -147,7 +179,12 @@ function ModifiedMark({ v, onRestore }: { v: TracedValue; onRestore: () => void 
             </div>
           ))}
         </dl>
-        <Button size="sm" variant="outline" className="mt-3 w-full rounded-full" onClick={onRestore}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3 w-full rounded-full"
+          onClick={onRestore}
+        >
           Eredeti érték visszaállítása
         </Button>
       </PopoverContent>
@@ -171,7 +208,12 @@ function Editor({
   const { admin, categories, addCategory } = useStore();
   const isNum = def.editType === "NUMBER" || def.editType === "PERCENTAGE";
   const unit = def.editType === "PERCENTAGE" ? "%" : def.unit;
-  const initial = isNum ? (() => { const n = parseNum(v.display); return n == null ? "" : String(n).replace(".", ","); })() : v.display;
+  const initial = isNum
+    ? (() => {
+        const n = parseNum(v.display);
+        return n == null ? "" : String(n).replace(".", ",");
+      })()
+    : v.display;
   const [val, setVal] = useState(initial);
   const [note, setNote] = useState("");
   const [askScope, setAskScope] = useState<string | null>(null);
@@ -185,7 +227,9 @@ function Editor({
     if (!isNum) return raw.trim();
     const n = parseNum(raw);
     if (n == null) return null;
-    return def.editType === "PERCENTAGE" ? `${fmtNum(n)}%` : `${fmtNum(n)}${unit ? ` ${unit}` : ""}`;
+    return def.editType === "PERCENTAGE"
+      ? `${fmtNum(n)}%`
+      : `${fmtNum(n)}${unit ? ` ${unit}` : ""}`;
   };
   const commit = (raw = val) => {
     const f = finalValue(raw);
@@ -208,10 +252,20 @@ function Editor({
   );
   const actions = (
     <span className="inline-flex shrink-0 items-center gap-1">
-      <button type="button" aria-label="Mentés" onClick={() => commit()} className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <button
+        type="button"
+        aria-label="Mentés"
+        onClick={() => commit()}
+        className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+      >
         <Check className="size-4" />
       </button>
-      <button type="button" aria-label="Mégse" onClick={onCancel} className="inline-flex size-8 items-center justify-center rounded-full hover:bg-muted">
+      <button
+        type="button"
+        aria-label="Mégse"
+        onClick={onCancel}
+        className="inline-flex size-8 items-center justify-center rounded-full hover:bg-muted"
+      >
         <X className="size-4" />
       </button>
     </span>
@@ -221,13 +275,27 @@ function Editor({
     return (
       <span className="inline-flex flex-wrap items-center gap-2 rounded-xl border bg-background p-2 text-sm">
         <span className="font-medium">{askScope}</span>
-        <Button size="sm" className="h-7 rounded-full" onClick={() => onSave(askScope, note, "product")}>
+        <Button
+          size="sm"
+          className="h-7 rounded-full"
+          onClick={() => onSave(askScope, note, "product")}
+        >
           Csak ennél a terméknél
         </Button>
-        <Button size="sm" variant="outline" className="h-7 rounded-full" onClick={() => onSave(askScope, note, "default")}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 rounded-full"
+          onClick={() => onSave(askScope, note, "default")}
+        >
           Alapérték módosítása
         </Button>
-        <button type="button" aria-label="Mégse" onClick={onCancel} className="p-1 text-muted-foreground">
+        <button
+          type="button"
+          aria-label="Mégse"
+          onClick={onCancel}
+          className="p-1 text-muted-foreground"
+        >
           <X className="size-4" />
         </button>
       </span>
@@ -304,7 +372,12 @@ function Editor({
             >
               <Check className="size-4" />
             </button>
-            <button type="button" aria-label="Mégse" onClick={onCancel} className="inline-flex size-8 items-center justify-center rounded-full hover:bg-muted">
+            <button
+              type="button"
+              aria-label="Mégse"
+              onClick={onCancel}
+              className="inline-flex size-8 items-center justify-center rounded-full hover:bg-muted"
+            >
               <X className="size-4" />
             </button>
           </span>
@@ -317,7 +390,10 @@ function Editor({
     const opts = categories[def.categoryId ?? ""]?.options ?? [];
     const sel = new Set(val.split("; ").filter(Boolean));
     return (
-      <span className="inline-flex flex-col gap-2 rounded-xl border bg-background p-3" onKeyDown={keys}>
+      <span
+        className="inline-flex flex-col gap-2 rounded-xl border bg-background p-3"
+        onKeyDown={keys}
+      >
         <span className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
           {opts.map((o) => (
             <label key={o} className="flex items-center gap-2 text-sm">
@@ -342,8 +418,16 @@ function Editor({
   if (def.editType === "BOOLEAN")
     return (
       <span className="inline-flex items-center gap-2">
-        <Switch defaultChecked={v.display === "Igen"} onCheckedChange={(c) => onSave(c ? "Igen" : "Nem", "", "product")} />
-        <button type="button" aria-label="Mégse" onClick={onCancel} className="p-1 text-muted-foreground">
+        <Switch
+          defaultChecked={v.display === "Igen"}
+          onCheckedChange={(c) => onSave(c ? "Igen" : "Nem", "", "product")}
+        />
+        <button
+          type="button"
+          aria-label="Mégse"
+          onClick={onCancel}
+          className="p-1 text-muted-foreground"
+        >
           <X className="size-4" />
         </button>
       </span>
@@ -362,7 +446,13 @@ function Editor({
           className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/40"
         />
         <div className="mt-1 flex items-center gap-2">
-          <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={keys} placeholder="Megjegyzés (opcionális)" className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" />
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={keys}
+            placeholder="Megjegyzés (opcionális)"
+            className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
+          />
           {actions}
         </div>
       </div>
@@ -380,13 +470,26 @@ function Editor({
             value={val}
             onChange={(e) => setVal(e.target.value)}
             onKeyDown={keys}
-            className={cn("h-9 rounded-md border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40", isNum ? "w-28 pr-10 text-right" : "w-64 max-w-full")}
+            className={cn(
+              "h-9 rounded-md border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring/40",
+              isNum ? "w-28 pr-10 text-right" : "w-64 max-w-full",
+            )}
           />
-          {isNum && unit && <span className="pointer-events-none absolute right-2 text-xs text-muted-foreground">{unit}</span>}
+          {isNum && unit && (
+            <span className="pointer-events-none absolute right-2 text-xs text-muted-foreground">
+              {unit}
+            </span>
+          )}
         </span>
         {actions}
       </span>
-      <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={keys} placeholder="Megjegyzés (opcionális)" className="h-7 w-64 max-w-full rounded-md border bg-background px-2 text-xs" />
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        onKeyDown={keys}
+        placeholder="Megjegyzés (opcionális)"
+        className="h-7 w-64 max-w-full rounded-md border bg-background px-2 text-xs"
+      />
     </span>
   );
 }

@@ -1,6 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Home, Plus, Package, ClipboardCheck, BookOpen, SlidersHorizontal, FileText, Settings, Menu } from "lucide-react";
+import {
+  Home,
+  Plus,
+  Package,
+  ClipboardCheck,
+  BookOpen,
+  SlidersHorizontal,
+  FileText,
+  Settings,
+  Menu,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -43,7 +53,9 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           activeOptions={{ exact: n.to === "/" }}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-          activeProps={{ className: "bg-sidebar-accent !text-sidebar-accent-foreground font-semibold" }}
+          activeProps={{
+            className: "bg-sidebar-accent !text-sidebar-accent-foreground font-semibold",
+          }}
         >
           <n.icon className="size-[18px]" />
           {n.label}
@@ -63,13 +75,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo />
         </div>
         <NavList />
-        <p className="mt-auto px-3 text-xs text-muted-foreground">Helyi feldolgozás – az adatok nem hagyják el ezt a gépet.</p>
+        <p className="mt-auto px-3 text-xs text-muted-foreground">
+          Helyi feldolgozás – az adatok nem hagyják el ezt a gépet.
+        </p>
       </aside>
 
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
         <Logo />
         <Sheet>
-          <SheetTrigger className="inline-flex size-10 items-center justify-center rounded-full hover:bg-muted" aria-label="Menü">
+          <SheetTrigger
+            className="inline-flex size-10 items-center justify-center rounded-full hover:bg-muted"
+            aria-label="Menü"
+          >
             <Menu className="size-5" />
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-4">
@@ -89,7 +106,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         {mobile.map((n) => {
           const active = n.to === "/" ? path === "/" : path.startsWith(n.to);
           return (
-            <Link key={n.to} to={n.to} className={cn("flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium", active ? "text-primary" : "text-muted-foreground")}>
+            <Link
+              key={n.to}
+              to={n.to}
+              className={cn(
+                "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
               <n.icon className="size-5" />
               {n.label}
             </Link>

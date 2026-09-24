@@ -1,6 +1,13 @@
 import type { Check } from "./types";
 
-export const STEPS = ["Források", "Alapanyagok", "Adatok", "Ellenőrzés", "Dokumentumok", "Jóváhagyás"] as const;
+export const STEPS = [
+  "Források",
+  "Alapanyagok",
+  "Adatok",
+  "Ellenőrzés",
+  "Dokumentumok",
+  "Jóváhagyás",
+] as const;
 export type Step = (typeof STEPS)[number];
 
 export interface FixTarget {
@@ -14,7 +21,8 @@ export interface FixTarget {
 
 /** Deterministic mapping: every non-ok check → where it is fixed. */
 export function fixTarget(c: Check): FixTarget {
-  if (c.id === "doc-diff") return { step: "Dokumentumok", anchor: "doc-diffs", label: "ELTÉRÉSEK MEGNYITÁSA" };
+  if (c.id === "doc-diff")
+    return { step: "Dokumentumok", anchor: "doc-diffs", label: "ELTÉRÉSEK MEGNYITÁSA" };
   switch (c.action) {
     case "resolve-ingredients":
       return { step: "Alapanyagok", anchor: "ingredients", label: "ALAPANYAGOK JAVÍTÁSA" };
@@ -23,14 +31,25 @@ export function fixTarget(c: Check): FixTarget {
     case "regulatory":
       return { step: "Adatok", anchor: `field:${c.field}`, label: "ELLENŐRZÉS" };
     case "sources":
-      if (c.id === "src-link") return { step: "Források", anchor: "Alapanyagok összekapcsolása", label: "ÖSSZEKAPCSOLÁS" };
-      if (c.id === "src-conf") return { step: "Források", anchor: "Eltérő adatok", label: "ELTÉRÉSEK MEGNYITÁSA" };
-      if (c.id === "src-unk") return { step: "Források", anchor: "Új / nem besorolt adat", label: "JAVÍTÁS" };
-      if (c.id === "src-reg") return { step: "Források", anchor: "Jogszabályi ellenőrzés", label: "ELLENŐRZÉS" };
+      if (c.id === "src-link")
+        return { step: "Források", anchor: "Alapanyagok összekapcsolása", label: "ÖSSZEKAPCSOLÁS" };
+      if (c.id === "src-conf")
+        return { step: "Források", anchor: "Eltérő adatok", label: "ELTÉRÉSEK MEGNYITÁSA" };
+      if (c.id === "src-unk")
+        return { step: "Források", anchor: "Új / nem besorolt adat", label: "JAVÍTÁS" };
+      if (c.id === "src-reg")
+        return { step: "Források", anchor: "Jogszabályi ellenőrzés", label: "ELLENŐRZÉS" };
       return { step: "Források", anchor: "Dokumentumok", label: "JAVÍTÁS" };
   }
-  if (c.id === "txt") return { step: "Adatok", anchor: "field:ingredientText", field: "ingredientText", label: "ELLENŐRZÉS" };
-  if (c.id === "qty" || c.id === "energy" || c.id === "recipe") return { step: "Alapanyagok", anchor: "ingredients", label: "JAVÍTÁS" };
+  if (c.id === "txt")
+    return {
+      step: "Adatok",
+      anchor: "field:ingredientText",
+      field: "ingredientText",
+      label: "ELLENŐRZÉS",
+    };
+  if (c.id === "qty" || c.id === "energy" || c.id === "recipe")
+    return { step: "Alapanyagok", anchor: "ingredients", label: "JAVÍTÁS" };
   return { step: "Ellenőrzés", label: "JAVÍTÁS" };
 }
 
@@ -40,7 +59,10 @@ export function openIssues(checks: Check[]) {
 
 /** Counter per step: number of open issues that are fixed on that step. */
 export function stepCounters(checks: Check[]): Record<Step, { errors: number; warns: number }> {
-  const out = Object.fromEntries(STEPS.map((s) => [s, { errors: 0, warns: 0 }])) as Record<Step, { errors: number; warns: number }>;
+  const out = Object.fromEntries(STEPS.map((s) => [s, { errors: 0, warns: 0 }])) as Record<
+    Step,
+    { errors: number; warns: number }
+  >;
   for (const c of openIssues(checks)) {
     const t = fixTarget(c).step;
     if (c.level === "error") out[t].errors++;

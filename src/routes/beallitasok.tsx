@@ -13,7 +13,10 @@ export const Route = createFileRoute("/beallitasok")({
   head: () => ({
     meta: [
       { title: "Beállítások – PÖTTYÖS RecipeFlow" },
-      { name: "description", content: "Felhasználó, gyártói adatok, tárolási szöveg és demó adatok kezelése." },
+      {
+        name: "description",
+        content: "Felhasználó, gyártói adatok, tárolási szöveg és demó adatok kezelése.",
+      },
       { property: "og:title", content: "Beállítások – PÖTTYÖS RecipeFlow" },
       { property: "og:description", content: "Alkalmazás beállítások." },
     ],
@@ -26,7 +29,11 @@ function SettingsPage() {
   const field = (k: "userName" | "manufacturer" | "distributor" | "storage", l: string) => (
     <div>
       <Label>{l}</Label>
-      <Input className="mt-1" value={settings[k]} onChange={(e) => setSettings({ ...settings, [k]: e.target.value })} />
+      <Input
+        className="mt-1"
+        value={settings[k]}
+        onChange={(e) => setSettings({ ...settings, [k]: e.target.value })}
+      />
     </div>
   );
   const [usage, setUsage] = useState<{ usedMB: number; persisted: boolean } | null>(null);
@@ -51,16 +58,26 @@ function SettingsPage() {
             {row("Helyi tárhely", local == null ? "…" : local ? "✓" : "Nem elérhető", !!local)}
             {row("Internet szükséges", "Nem")}
             {row("Felhő szinkronizáció", "Kikapcsolva")}
-            {row("Felhasznált tárhely", usage ? `${usage.usedMB.toLocaleString("hu-HU", { maximumFractionDigits: 1 })} MB` : "—")}
+            {row(
+              "Felhasznált tárhely",
+              usage
+                ? `${usage.usedMB.toLocaleString("hu-HU", { maximumFractionDigits: 1 })} MB`
+                : "—",
+            )}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Termékek, döntések, előzmények és az eredeti feltöltött fájlok ezen az eszközön tárolódnak, újraindítás után is megmaradnak.</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Termékek, döntések, előzmények és az eredeti feltöltött fájlok ezen az eszközön
+            tárolódnak, újraindítás után is megmaradnak.
+          </p>
         </Panel>
         <Panel className="space-y-4">
           {field("userName", "Felhasználó neve")}
           <label className="flex items-center justify-between gap-4">
             <span>
               <span className="block font-medium">Adminisztrátori nézet</span>
-              <span className="text-sm text-muted-foreground">Szótár, szabályok és sablonok megjelenítése a menüben.</span>
+              <span className="text-sm text-muted-foreground">
+                Szótár, szabályok és sablonok megjelenítése a menüben.
+              </span>
             </span>
             <Switch checked={admin} onCheckedChange={setAdmin} />
           </label>
@@ -73,7 +90,9 @@ function SettingsPage() {
         </Panel>
         <Panel>
           <h2 className="font-bold">Adatok</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Minden adat csak ezen az eszközön tárolódik. Semmi nem kerül külső szolgáltatásba.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Minden adat csak ezen az eszközön tárolódik. Semmi nem kerül külső szolgáltatásba.
+          </p>
           <Button
             variant="outline"
             className="mt-4 rounded-full"

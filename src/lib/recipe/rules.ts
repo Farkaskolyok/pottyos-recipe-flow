@@ -78,7 +78,8 @@ export const DEFAULT_RULES: RuleDef[] = [
     name: "Energia számítás",
     version: "v1",
     category: "Tápérték",
-    description: "Ha a recept nem tartalmaz energiát: zsír 37/9, szénhidrát 17/4, fehérje 17/4, rost 8/2 kJ/kcal.",
+    description:
+      "Ha a recept nem tartalmaz energiát: zsír 37/9, szénhidrát 17/4, fehérje 17/4, rost 8/2 kJ/kcal.",
     input: "Makrotápanyagok / 100 g",
     condition: "energia nincs megadva",
     transformation: "átváltási tényezők",
@@ -92,7 +93,8 @@ export const DEFAULT_RULES: RuleDef[] = [
     name: "Súlyozott tápérték",
     version: "v1",
     category: "Tápérték",
-    description: "Tápérték / 100 g = Σ(mennyiség × érték) / Σ mennyiség. Előbb számítás, utána kerekítés.",
+    description:
+      "Tápérték / 100 g = Σ(mennyiség × érték) / Σ mennyiség. Előbb számítás, utána kerekítés.",
     input: "Alapanyag mennyiségek és tápértékek",
     condition: "minden termék",
     transformation: "súlyozott átlag",

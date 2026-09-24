@@ -20,5 +20,9 @@ export function RegBadge({ status }: { status: RegStatus }) {
     review: ["!", "Ellenőrzendő", "bg-warning-soft text-foreground"],
     invalid: ["×", "Nem használható", "bg-danger-soft text-destructive"],
   }[status];
-  return <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", m[2])}>{m[0]} {m[1]}</span>;
+  return (
+    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", m[2])}>
+      {m[0]} {m[1]}
+    </span>
+  );
 }
