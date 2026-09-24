@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { DictionaryEntry, Product } from "./recipe/types";
 import { DEMO_DICTIONARY } from "./recipe/dictionary";
@@ -33,7 +34,9 @@ interface Store extends State {
   addCategory: (id: string, value: string) => void;
 }
 
-const Ctx = createContext<Store | null>(null);
+// Keep one context instance across hot reloads so provider and consumers always match.
+const g = globalThis as unknown as { __rfStoreCtx?: React.Context<Store | null> };
+const Ctx = (g.__rfStoreCtx ??= createContext<Store | null>(null));
 
 function initial(): State {
   return {
