@@ -1,3 +1,4 @@
+import { ProductActions } from "@/components/rf/ProductActions";
 import { DemoBadge } from "@/components/rf/ModeSwitch";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -105,11 +106,11 @@ function Products() {
           </div>
           <ul className="divide-y">
             {list.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="flex items-center pr-2">
                 <Link
                   to="/termekek/$id"
                   params={{ id: p.id }}
-                  className="grid gap-1 px-4 py-3.5 hover:bg-muted/60 md:grid-cols-[2fr_1fr_1.2fr_1fr_1fr] md:items-center md:gap-4"
+                  className="grid flex-1 gap-1 px-4 py-3.5 hover:bg-muted/60 md:grid-cols-[2fr_1fr_1.2fr_1fr_1fr] md:items-center md:gap-4"
                 >
                   <span className="flex items-center gap-2 font-semibold">
                     {p.isDemo && <DemoBadge />}
@@ -128,6 +129,12 @@ function Products() {
                     {p.approvedBy ?? p.createdBy}
                   </span>
                 </Link>
+                <ProductActions
+                  id={p.id}
+                  name={String(
+                    p.overrides.productName?.value ?? p.raw.meta.productName?.value ?? p.raw.fileName,
+                  )}
+                />
               </li>
             ))}
           </ul>
