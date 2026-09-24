@@ -32,10 +32,7 @@ function Dictionary() {
   );
   return (
     <div>
-      <PageHeader
-        title="Alapanyag szótár"
-        subtitle="Egy alapanyag több technikai néven is szerepelhet – itt rendelhetők egy jóváhagyott megnevezéshez."
-      />
+      <PageHeader title="Alapanyag szótár" />
       <DesktopHint />
       <div className="relative mb-5">
         <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

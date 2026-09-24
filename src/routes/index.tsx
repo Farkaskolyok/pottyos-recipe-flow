@@ -14,8 +14,7 @@ export const Route = createFileRoute("/")({
       { title: "PÖTTYÖS RecipeFlow – Főoldal" },
       {
         name: "description",
-        content:
-          "Gyártmánylap, termékspecifikáció és csomagolási szöveg egy receptből.",
+        content: "Gyártmánylap, termékspecifikáció és csomagolási szöveg egy receptből.",
       },
       { property: "og:title", content: "PÖTTYÖS RecipeFlow" },
       {

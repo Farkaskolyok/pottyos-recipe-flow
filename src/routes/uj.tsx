@@ -307,7 +307,6 @@ function NewProduct() {
         </Section>
       </div>
 
-
       <div className="mt-6 flex justify-end">
         <Button
           size="lg"
