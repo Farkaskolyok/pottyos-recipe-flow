@@ -833,7 +833,7 @@ function StepCounter({ s, c, done, p, diffs, active }: { s: Step; c: { errors: n
   );
 }
 
-function IssueRow({ c, i, onFix, extra }: { c: Check; i?: number; onFix: (c: Check) => void; extra?: React.ReactNode }) {
+function IssueRow({ c, i, onFix, extra }: { c: Check; i?: number; onFix: (c: Check) => void; extra?: import("react").ReactNode }) {
   const t = fixTarget(c);
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5">

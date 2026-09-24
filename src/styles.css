@@ -123,3 +123,10 @@
     font-family: var(--font-sans);
   }
 }
+
+/* brief highlight when a JAVÍTÁS button leads to a field */
+@keyframes rf-flash {
+  0%, 60% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 55%, transparent); background-color: color-mix(in oklch, var(--primary) 8%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
+}
+.rf-flash { animation: rf-flash 1.8s ease-out; border-radius: 0.5rem; }
