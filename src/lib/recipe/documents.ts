@@ -364,6 +364,131 @@ export function buildDocs(p: Product, ds: Dataset, dict: DictionaryEntry[], s: S
       { type: "para", text: val("pack", "barcode"), field: "barcode", prefix: "Vonalkód: " },
     ],
   };
+  /* ---------------- MASTER TEMPLATE SLOT VALUES (current dataset only) ---------------- */
+  const pair = (a: string, c: string) => `${n(a).per100.display}\n${n(c).per100.display}`;
+  const nut = {
+    n_energy: `${n("energyKj").per100.display}\n${n("energyKcal").per100.display}`,
+    n_fat_sat: pair("fat", "saturates"),
+    n_carb_sug: pair("carbohydrate", "sugars"),
+    n_tfa: DASH,
+    n_protein: n("protein").per100.display,
+    n_fibre: n("fibre").per100.display,
+    n_salt: n("salt").per100.display,
+  };
+  const mayC = val("pack", "mayContain");
+  const al: Record<string, string> = {};
+  for (const [k, re] of AL_KEYS) al[`al_${k}`] = ds.allergens.some((a) => re.test(a)) ? "+" : re.test(mayC) ? "?" : "-";
+  const rev: Record<string, string> = {};
+  for (let i = 0; i < 3; i++) {
+    const r = revRows[i];
+    rev[`rev${i}_v`] = r?.[0] ?? "";
+    rev[`rev${i}_d`] = r?.[1] ?? "";
+    rev[`rev${i}_n`] = r?.[2] ?? "";
+  }
+  const storageFull = (d: Destination) => or(`${b.storageMode.display}${val(d, "storage") ? ", " + val(d, "storage") : ""}`);
+  const today = huDate(p.updatedAt);
+  const common = (d: Destination) => ({
+    productName: name,
+    manufacturerName: or(val(d, "manufacturer").split("\n")[0]),
+    effectiveDate: or(val(d, "effectiveDate")),
+    docVersion: p.docVersion,
+    date: today,
+  });
+  sheet.fields = {
+    ...common("sheet"), ...nut, ...al, ...rev,
+    productNameUpper: name.toUpperCase(),
+    description: or(val("sheet", "description")),
+    preparedBy: or(val("sheet", "preparedBy")),
+    responsible: or(val("sheet", "responsible")),
+    approver: or(val("sheet", "approver") || (p.approvedBy ?? "")),
+    manufacturer: or(val("sheet", "manufacturer")),
+    plantName: or(val("sheet", "plantName")),
+    plantAddress: or(val("sheet", "plantAddress")),
+    healthMark: or(val("sheet", "healthMark")),
+    legalName: or(val("sheet", "legalName") || val("sheet", "description")),
+    ingredientsList: or(sortedIngs.length ? ingRows.map((r) => `${r[0]} ${r[2].replace(" %", "%")}`).join(",\n") : ""),
+    gmoStatement: or(val("sheet", "gmoStatement")),
+    processDescription: or(val("sheet", "processDescription")),
+    packagingForm: or(val("sheet", "packagingForm") || val("sheet", "packaging")),
+    packagingMethod: or(val("sheet", "packagingMethod")),
+    packagingClosure: or(val("sheet", "packagingClosure")),
+    packagingMaterial: or(val("sheet", "packagingMaterial")),
+    productWeight: or(weight),
+    weightTolerance: val("sheet", "weightTolerance"),
+    regs: or(regs.join("\n")),
+    micro: or(val("sheet", "micro")),
+    physical: or(val("sheet", "physical")),
+    sensory: or(val("sheet", "sensory")),
+    shelfLife: or(val("sheet", "shelfLife")),
+    storage: storageFull("sheet"),
+    labelling: or(val("sheet", "labelling")),
+  };
+  spec.fields = {
+    ...common("spec"), ...nut, ...al,
+    sapCode: or(val("spec", "sapCode")),
+    taricCode: or(val("spec", "taricCode")),
+    regs: or(regs.join("\n")),
+    plantName: or(val("spec", "plantName") || val("spec", "manufacturer")),
+    plantAddressMark: or(`${val("spec", "plantAddress")}${val("spec", "healthMark") ? "  " + val("spec", "healthMark") : ""}`),
+    description: or(val("spec", "description")),
+    recommendedUse: or(val("spec", "recommendedUse")),
+    consumerGroup: or(val("spec", "consumerGroup")),
+    packagingMaterial: or(val("spec", "packagingMaterial") || val("spec", "packaging")),
+    secondaryPackaging: or(val("spec", "secondaryPackaging")),
+    caseNet: or(val("spec", "caseNet")),
+    caseGross: or(val("spec", "caseGross")),
+    caseUnits: or(val("spec", "caseUnits")),
+    palletPackaging: or(val("spec", "palletPackaging")),
+    storage: storageFull("spec"),
+    storageTemp: or(val("spec", "storageTemp")),
+    storageHumidity: or(val("spec", "storageHumidity")),
+    transport: or(val("spec", "transport")),
+    transportTemp: or(val("spec", "transportTemp")),
+    transportHumidity: or(val("spec", "transportHumidity")),
+    shelfLife: or(val("spec", "shelfLife")),
+    distributionConditions: or(val("spec", "distributionConditions")),
+    ingredientText: or(ingText),
+    weightValue: or(weight.replace(/\s*g$/i, "")),
+    weightTolerance: or(val("spec", "weightTolerance")),
+    fatValue: n("fat").per100.display.replace(/\s*g$/i, ""),
+    acceptanceRange: or(b.acceptanceRange.display),
+    micro: or(val("spec", "micro")),
+    sensory: or(val("spec", "sensory")),
+    preparedBy: or(p.createdBy),
+    reviewedBy: or(p.reviewedBy ?? ""),
+    reviewDate: p.reviewedBy ? today : "",
+  };
+  const ps: Record<string, string> = {};
+  for (const k of ["fat", "saturates", "carbohydrate", "sugars", "protein", "salt"]) {
+    ps[`p100_${k}`] = n(k).per100.display;
+    ps[`psv_${k}`] = n(k).perServing?.display ?? DASH;
+  }
+  const kjServ = n("energyKj").perServing;
+  const kjServNum = Number(String(kjServ?.display ?? "").replace(/[^0-9,.]/g, "").replace(",", "."));
+  pack.fields = {
+    ...common("pack"), ...ps,
+    marketingName: val("pack", "marketingName") || name,
+    variant: val("pack", "variant"),
+    servingSize: or(sv),
+    frontServingEnergy: kjServ ? `${kjServ.display}/ ${n("energyKcal").perServing?.display ?? ""}` : DASH,
+    riPct: kjServNum ? `${Math.round((kjServNum / 8400) * 100)}%` : DASH,
+    energy100: `${n("energyKj").per100.display}/ ${n("energyKcal").per100.display}`,
+    p100_energy: `${n("energyKj").per100.display}\n${n("energyKcal").per100.display}`,
+    psv_energy: kjServ ? `${kjServ.display}/ ${n("energyKcal").perServing?.display ?? ""}` : DASH,
+    legalName: or(val("pack", "legalName") || val("pack", "description")),
+    productWeight: or(weight),
+    mayContain: mayC,
+    claims: val("pack", "claims"),
+    servingsPerPack: or(val("pack", "servingsPerPack")),
+    storageText: `${b.bestBeforeWording.display} (nap, hónap) a csomagoláson jelölt időpontig${val("pack", "storage") ? ", " + val("pack", "storage") : ""}.`,
+    manufacturer: or(val("pack", "manufacturer")),
+    healthMarkNo: (val("pack", "healthMark").match(/\d+/)?.[0]) ?? DASH,
+    plantAddress: or(val("pack", "plantAddress")),
+    infoLine: or(val("pack", "infoLine")),
+    website: val("pack", "website"),
+    barcode: or(val("pack", "barcode")),
+  };
+  pack.rich = { ingredientsRich: [{ text: "Összetevők: ", emph: true }, ...ds.ingredientSegments, { text: "." }] };
   return { sheet, spec, pack };
 }
 
