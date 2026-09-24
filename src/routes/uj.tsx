@@ -25,6 +25,8 @@ import {
   SOURCE_TYPE_LABELS,
   type SourceFile,
   type SourceType,
+  deleteSourceFile,
+  recipeFileId,
 } from "@/lib/recipe/sources";
 import { fileSize } from "@/lib/recipe/format";
 
