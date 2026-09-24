@@ -6,6 +6,7 @@
 - [x] Validation, traceability drawer, manual overrides, approval
 - [x] Three documents + real DOCX export
 - [x] Fix "home page not showing" (was a temporary reload while tools installed)
+- [x] Inline field-by-field editing (edit types, dropdowns, Módosítva, restore, company/regulatory rules)
 - [ ] Version comparison (changed values only)
 - [ ] Historical example library + Szabályjavaslat
 - [ ] Editable dictionary/rules/template forms, product-specific exceptions
