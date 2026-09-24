@@ -153,7 +153,34 @@ async function docxBlocks(buf: ArrayBuffer): Promise<Block[]> {
   return out;
 }
 
-/** Legacy binary .doc: best-effort local text scan. A local conversion component can replace this later. */
+export const LEGACY_DOC_WARNING = "! Régi Word formátum – ellenőrzés szükséges";
+
+/**
+ * Local .doc → .docx conversion component for the offline installed version.
+ * The installer runs a converter on this machine only (e.g. headless LibreOffice wrapped in a tiny
+ * HTTP service on 127.0.0.1). No cloud conversion is ever used. Contract:
+ *   POST {url}/convert  body: raw .doc bytes  →  200 with .docx bytes
+ * The URL can be changed via localStorage key "rf.docConverterUrl". If unreachable, returns null.
+ */
+export async function convertLegacyDocLocally(buf: ArrayBuffer): Promise<ArrayBuffer | null> {
+  if (typeof window === "undefined") return null;
+  const base = localStorage.getItem("rf.docConverterUrl") || "http://127.0.0.1:8765";
+  if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(base)) return null; // local only
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 1500);
+  try {
+    const r = await fetch(`${base}/convert`, { method: "POST", body: buf, signal: ctl.signal, headers: { "Content-Type": "application/msword" } });
+    if (!r.ok) return null;
+    const out = await r.arrayBuffer();
+    return new Uint8Array(out.slice(0, 2)).join() === "80,75" ? out : null; // ZIP signature
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Legacy binary .doc fallback: best-effort local text scan. Never treated as validated data. */
 function legacyDocBlocks(buf: ArrayBuffer): Block[] {
   const bytes = new Uint8Array(buf);
   // Word 97 stores text mostly as 8-bit or UTF-16LE; read both and keep readable runs.
