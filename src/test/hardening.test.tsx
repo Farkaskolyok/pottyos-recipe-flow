@@ -175,6 +175,7 @@ describe("orphaned file cleanup", () => {
       </StoreProvider>,
     );
     await screen.findByText(/n=\d+/);
+    await new Promise((r) => setTimeout(r, 800)); // let start-up file sync finish
     const p = api!.products.find((x) => x.files?.length)!;
     const ids = [`recipe:${p.id}`, ...p.files!.map((f) => f.id)];
     for (const id of ids) await saveFileBlob(id, new Blob(["x"]), id);
@@ -214,7 +215,9 @@ describe("legacy .doc", () => {
     p.files = [...p.files!, f];
     const c1 = buildDataset(p, dict, S).checks.find((c) => c.id === "src-legacy");
     expect(c1?.level).toBe("error");
-    p.partialReviewAck = { doc1: { by: "Admin", at: "2026-01-01" } };
+    p.partialReviewAck = Object.fromEntries(
+      p.files.map((x) => [x.id, { by: "Admin", at: "2026-01-01" }]),
+    );
     const c2 = buildDataset(p, dict, S).checks.find((c) => c.id === "src-legacy");
     expect(c2?.level).toBe("ok");
   });
