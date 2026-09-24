@@ -39,12 +39,13 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
         }),
       ];
     case "para":
-      return [new Paragraph({ spacing: { after: 100 }, children: [new TextRun({ text: b.text, font: FONT, size: 20 })] })];
+      if (!b.text) return [];
+      return [new Paragraph({ spacing: { after: 100 }, children: [new TextRun({ text: (b.prefix ?? "") + b.text, font: FONT, size: 20 })] })];
     case "rich":
       return [
         new Paragraph({
           spacing: { after: 100 },
-          children: b.segments.map((s) => new TextRun({ text: s.text, bold: s.emph, font: FONT, size: 20 })),
+          children: [...(b.prefix ?? []), ...b.segments, ...(b.suffix ?? [])].map((s) => new TextRun({ text: s.text, bold: s.emph, font: FONT, size: 20 })),
         }),
       ];
     case "kv":
@@ -52,7 +53,7 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
       return [
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: b.rows.map(([k, v]) => new TableRow({ children: [cell(k, { bold: true, shade: true, width: 35 }), cell(v, { width: 65 })] })),
+          rows: b.rows.filter((r) => r[1]).map(([k, v]) => new TableRow({ children: [cell(k, { bold: true, shade: true, width: 35 }), cell(v, { width: 65 })] })),
         }),
       ];
     case "table":

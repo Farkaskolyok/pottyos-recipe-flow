@@ -21,6 +21,7 @@ export interface Settings {
   distributor: string;
   storage: string;
   userName: string;
+  companyDefaults: { acceptanceRange: string; legalText: string };
   visibility: Record<string, Destination[]>;
 }
 
@@ -30,6 +31,10 @@ export const DEFAULT_SETTINGS: Settings = {
   distributor: "",
   storage: "+2 °C és +6 °C között tárolandó.",
   userName: "Demo felhasználó",
+  companyDefaults: {
+    acceptanceRange: "2%",
+    legalText: "A tápérték-jelölés az 1169/2011/EU rendelet szerint készült.",
+  },
   visibility: {
     productName: ["sheet", "spec", "pack"],
     marketingName: ["spec", "pack"],
@@ -145,6 +150,13 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
   manualOnly("storage", "Tárolás", settings.storage);
   manualOnly("manufacturer", "Gyártó", settings.manufacturer);
   manualOnly("distributor", "Forgalmazó", settings.distributor);
+  const cd = settings.companyDefaults ?? DEFAULT_SETTINGS.companyDefaults;
+  manualOnly("acceptanceRange", "Elfogadhatósági tartomány", cd.acceptanceRange);
+  manualOnly("texture", "Állag", "Krémes");
+  manualOnly("storageMode", "Tárolási mód", "Hűtve tárolandó");
+  manualOnly("bestBeforeWording", "Minőségmegőrzési megfogalmazás", "Minőségét megőrzi:");
+  manualOnly("legalText", "Jogszabályi szöveg", cd.legalText);
+  basics.legalRef = { label: "Jogszabály azonosító", original: "1169/2011/EU", calculated: "1169/2011/EU", display: "1169/2011/EU", origin: "source" };
 
   const weightG = toNum(basics.productWeight.display) ?? null;
 
@@ -221,6 +233,12 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
     if (e.subIngredients) segs.push({ text: ` (${e.subIngredients})` });
   });
   const autoText = segs.map((s) => s.text).join("");
+  const autoAllergens = [...allergens].join("; ");
+  const alOv = p.overrides.allergenList;
+  basics.allergenList = alOv
+    ? { label: "Allergének", original: autoAllergens || null, calculated: autoAllergens, display: alOv.value, origin: "manual", manual: alOv }
+    : { label: "Allergének", original: null, calculated: autoAllergens, display: autoAllergens, origin: "calculated", rule: ruleLabel("r-allergen") };
+  const finalAllergens = basics.allergenList.display ? basics.allergenList.display.split("; ").filter(Boolean) : [];
   const manualText = p.ingredientTextOverride;
   const ingredientSegments = manualText ? [{ text: manualText }] : segs;
 
@@ -258,6 +276,10 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
   if (!basics.manufacturer.display)
     checks.push({ id: "mfr", level: "warn", text: "Gyártó adatai nincsenek megadva", action: "set-value", field: "manufacturer" });
   if (manualText) checks.push({ id: "txt", level: "warn", text: "Összetevők szövege manuálisan módosítva – ellenőrizendő" });
+  for (const k of ["bestBeforeWording", "legalText"]) {
+    if (p.overrides[k] && !p.regulatoryAck?.[k])
+      checks.push({ id: `reg-${k}`, level: "error", text: `JOGSZABÁLYI ELLENŐRZÉS SZÜKSÉGES: ${basics[k].label}`, action: "regulatory", field: k });
+  }
 
   const counts = {
     ok: checks.filter((c) => c.level === "ok").length,
@@ -271,7 +293,7 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
     ingredientSegments,
     ingredientText: manualText ?? autoText,
     ingredientTextManual: !!manualText,
-    allergens: [...allergens],
+    allergens: finalAllergens,
     checks,
     counts,
     totalQty,
