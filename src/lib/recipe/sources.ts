@@ -401,6 +401,12 @@ const FIELD_LABELS: {
     outputs: ["sheet", "spec"],
   },
   {
+    key: "s.colour",
+    label: "Szín",
+    aliases: ["colour", "color", "szin"],
+    outputs: ["sheet", "spec"],
+  },
+  {
     key: "s.appearance",
     label: "Megjelenés",
     aliases: ["appearance", "megjelenes", "kulso"],
@@ -409,7 +415,7 @@ const FIELD_LABELS: {
   {
     key: "s.consistency",
     label: "Állag",
-    aliases: ["consistency", "texture", "allag"],
+    aliases: ["consistency", "texture", "allag", "allomany"],
     outputs: ["sheet", "spec"],
   },
   {
@@ -423,6 +429,18 @@ const FIELD_LABELS: {
     label: "Íz",
     aliases: ["taste", "flavour", "flavor", "iz"],
     outputs: ["sheet", "spec"],
+  },
+  {
+    key: "process",
+    label: "Folyamat paraméter",
+    aliases: [
+      "bevonasi homerseklet",
+      "coating temperature",
+      "processing temperature",
+      "application temperature",
+      "feldolgozasi homerseklet",
+    ],
+    outputs: ["sheet"],
   },
   {
     key: "gmo",
@@ -596,7 +614,17 @@ export function isNoiseText(t: string) {
   if (NOISE.some((r) => r.test(x))) return true;
   // contact data, markup and binary garbage
   if (/mailto:|https?:\/\/\S+$|<\/?[a-z:]+[^>]*>|^\+?[\d\s()/-]{7,}$/i.test(x)) return true;
+  if (/^(?:tel|phone|fax|e-?mail|telefon|mobil|mobile|t\s?\/\s?f|m)\b\.?\s*:/i.test(x)) return true;
   if (/^(?:tel|phone|fax|e-?mail|telefon)\b/i.test(x)) return true;
+  // contact person + phone number ("Csonka Attila M: +36 30-251-6024")
+  if (/\b(?:m|t|f|tel|mob|mobil|phone|fax|t\s?\/\s?f)\.?\s*:\s*\+?\d[\d\s()/-]{6,}$/i.test(x)) return true;
+  if (/\+?\d{2}[\s()-]*\d{1,3}[\s/-]*\d{3}[\s-]*\d{3,4}\s*$/.test(x) && x.replace(/[^\p{L}]/gu, "").length < 30)
+    return true;
+  // fill-in placeholders ("....... expertise : pl: OÉTI, other")
+  if (/\.{5,}|_{5,}|…{2,}/.test(x)) return true;
+  // allergen table legends / category headers
+  if (/jelenl[ée]t\s*\/?\s*presence|mentess[ée]g\s*\/?\s*freeness/i.test(x)) return true;
+  if (/^(?:di[óo]f[ée]l[ée]k|sort of nuts|nuts|gabonaf[ée]l[ée]k|cereals)\b[^:]*:/i.test(x)) return true;
   if ((x.match(/[^\p{L}\p{N}\s.,:;%°()/+\-–<>=]/gu)?.length ?? 0) > x.length * 0.3) return true;
   if (/^(?:aláírás|signature|bélyegző|stamp|p\.?\s?h\.?)\b/i.test(x)) return true;
   // standard identifiers only (e.g. "MSZ EN ISO 6579:2006")
