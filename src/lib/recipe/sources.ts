@@ -566,7 +566,7 @@ const QUALITY_ALIASES: { key: string; label: string; unit: string; aliases: stri
     aliases: ["s aureus", "staphylococcus aureus", "koagulaz pozitiv staphylococcus"],
   },
 ];
-const MICRO = new Set(["q.tpc", "q.yeast", "q.salmonella", "q.ecoli", "q.saureus"]);
+const MICRO = new Set(["q.tpc", "q.yeast", "q.salmonella", "q.ecoli", "q.saureus", "q.entero"]);
 
 /* ---------- source text noise: stored as source info, never a user task ---------- */
 const STD_REF =
