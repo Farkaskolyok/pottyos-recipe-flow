@@ -39,3 +39,4 @@
 - [x] Per-product (1 darab) nutrition in Szövegterv + missing net weight block
 - [x] Four-eyes review (Készítő/Ellenőr/Jóváhagyó), TERVEZET vs VÉGLEGES EXPORT, audit
 - [x] Fix CI lint failure (commit 23dfe01)
+- [x] Signature JPG + action dates + today's date in final Word exports
