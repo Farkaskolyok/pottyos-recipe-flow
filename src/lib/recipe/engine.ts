@@ -309,7 +309,8 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
         calculated: c,
         display: rs.display,
         origin: "calculated",
-        rule: `${ruleLabel("r-serving")} → ${ruleLabel(rs.ruleId)}`,
+        rule: `${ruleLabel("r-serving")}: ${huNumber(per100[key], 4)} × ${huNumber(weightG, 0)} g / 100 → ${ruleLabel(rs.ruleId)}`,
+        source: basics.productWeight.source,
       };
     }
     return { key, per100: v100, perServing: vs };
@@ -391,6 +392,14 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
           field: "productWeight",
         },
   );
+  if (!weightG)
+    checks.push({
+      id: "nserv",
+      level: "error",
+      text: "1 darabra számított tápérték nem számítható – nettó tömeg hiányzik",
+      action: "set-value",
+      field: "productWeight",
+    });
   checks.push(
     per100.energyKj > 0
       ? {

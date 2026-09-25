@@ -530,7 +530,7 @@ export function buildDocs(
         type: "kv",
         rows: [
           ["Készítette / Prepared by", p.createdBy],
-          ["Ellenőrizte / Checked by", or(p.reviewedBy ?? "")],
+          ["Ellenőrizte / Checked by", or(p.checkedBy ?? p.reviewedBy ?? "")],
           ["Jóváhagyta / Approved by", or(p.approvedBy ?? "")],
           ["Dátum / Date", huDate(p.updatedAt)],
         ],
@@ -658,7 +658,7 @@ export function buildDocs(
     ...rev,
     productNameUpper: name.toUpperCase(),
     description: or(val("sheet", "description")),
-    preparedBy: or(val("sheet", "preparedBy")),
+    preparedBy: or(val("sheet", "preparedBy") || p.createdBy),
     responsible: or(val("sheet", "responsible")),
     approver: or(val("sheet", "approver") || (p.approvedBy ?? "")),
     manufacturer: or(val("sheet", "manufacturer")),
@@ -721,8 +721,8 @@ export function buildDocs(
     micro: or(val("spec", "micro")),
     sensory: or(val("spec", "sensory")),
     preparedBy: or(p.createdBy),
-    reviewedBy: or(p.reviewedBy ?? ""),
-    reviewDate: p.reviewedBy ? today : "",
+    reviewedBy: or(p.checkedBy ?? p.reviewedBy ?? ""),
+    reviewDate: p.checkedAt ? huDate(p.checkedAt) : p.reviewedBy ? today : "",
   };
   const ps: Record<string, string> = {};
   for (const k of ["fat", "saturates", "carbohydrate", "sugars", "protein", "salt"]) {
@@ -747,7 +747,9 @@ export function buildDocs(
     riPct: kjServNum ? `${Math.round((kjServNum / 8400) * 100)}%` : DASH,
     energy100: `${n("energyKj").per100.display}/ ${n("energyKcal").per100.display}`,
     p100_energy: `${n("energyKj").per100.display}\n${n("energyKcal").per100.display}`,
-    psv_energy: kjServ ? `${kjServ.display}/ ${n("energyKcal").perServing?.display ?? ""}` : DASH,
+    psv_energy: kjServ
+      ? `${kjServ.display}/ ${n("energyKcal").perServing?.display ?? ""}`
+      : "1 darabra számított tápérték nem számítható – nettó tömeg hiányzik",
     legalName: or(val("pack", "legalName") || val("pack", "description")),
     productWeight: or(weight),
     mayContain: mayC,
