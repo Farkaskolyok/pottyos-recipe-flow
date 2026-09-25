@@ -328,7 +328,7 @@ export function isReadableLegacyText(t: string): boolean {
   const s = t.trim();
   if (s.length < 4 || s.length > 400) return false;
   if (LEGACY_META.test(s)) return false;
-  if (/[\u00c0-\u00ff]{0}ÿ/.test(s)) return false;
+  if (/ÿ/.test(s)) return false;
   const letters = (s.match(/[A-Za-zÀ-ž]/g) ?? []).length;
   const symbols = (s.match(/[^A-Za-zÀ-ž0-9\s.,:;/()%+\-–°<>=]/g) ?? []).length;
   if (letters / s.length < 0.5) return false;
@@ -674,14 +674,19 @@ export function isNoiseText(t: string) {
   if (/^(?:tel|phone|fax|e-?mail|telefon|mobil|mobile|t\s?\/\s?f|m)\b\.?\s*:/i.test(x)) return true;
   if (/^(?:tel|phone|fax|e-?mail|telefon)\b/i.test(x)) return true;
   // contact person + phone number ("Csonka Attila M: +36 30-251-6024")
-  if (/\b(?:m|t|f|tel|mob|mobil|phone|fax|t\s?\/\s?f)\.?\s*:\s*\+?\d[\d\s()/-]{6,}$/i.test(x)) return true;
-  if (/\+?\d{2}[\s()-]*\d{1,3}[\s/-]*\d{3}[\s-]*\d{3,4}\s*$/.test(x) && x.replace(/[^\p{L}]/gu, "").length < 30)
+  if (/\b(?:m|t|f|tel|mob|mobil|phone|fax|t\s?\/\s?f)\.?\s*:\s*\+?\d[\d\s()/-]{6,}$/i.test(x))
+    return true;
+  if (
+    /\+?\d{2}[\s()-]*\d{1,3}[\s/-]*\d{3}[\s-]*\d{3,4}\s*$/.test(x) &&
+    x.replace(/[^\p{L}]/gu, "").length < 30
+  )
     return true;
   // fill-in placeholders ("....... expertise : pl: OÉTI, other")
   if (/\.{5,}|_{5,}|…{2,}/.test(x)) return true;
   // allergen table legends / category headers
   if (/jelenl[ée]t\s*\/?\s*presence|mentess[ée]g\s*\/?\s*freeness/i.test(x)) return true;
-  if (/^(?:di[óo]f[ée]l[ée]k|sort of nuts|nuts|gabonaf[ée]l[ée]k|cereals)\b[^:]*:/i.test(x)) return true;
+  if (/^(?:di[óo]f[ée]l[ée]k|sort of nuts|nuts|gabonaf[ée]l[ée]k|cereals)\b[^:]*:/i.test(x))
+    return true;
   if ((x.match(/[^\p{L}\p{N}\s.,:;%°()/+\-–<>=]/gu)?.length ?? 0) > x.length * 0.3) return true;
   if (/^(?:aláírás|signature|bélyegző|stamp|p\.?\s?h\.?)\b/i.test(x)) return true;
   // standard identifiers only (e.g. "MSZ EN ISO 6579:2006")
