@@ -412,8 +412,18 @@ const FIELD_LABELS: {
     aliases: ["consistency", "texture", "allag"],
     outputs: ["sheet", "spec"],
   },
-  { key: "s.smell", label: "Illat", aliases: ["smell", "odour", "odor", "illat", "szag"], outputs: ["sheet", "spec"] },
-  { key: "s.taste", label: "Íz", aliases: ["taste", "flavour", "flavor", "iz"], outputs: ["sheet", "spec"] },
+  {
+    key: "s.smell",
+    label: "Illat",
+    aliases: ["smell", "odour", "odor", "illat", "szag"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "s.taste",
+    label: "Íz",
+    aliases: ["taste", "flavour", "flavor", "iz"],
+    outputs: ["sheet", "spec"],
+  },
   {
     key: "gmo",
     label: "GMO státusz",
@@ -427,7 +437,6 @@ const FIELD_LABELS: {
     outputs: ["sheet", "spec"],
   },
   {
-
     key: "composition",
     label: "Összetétel",
     aliases: ["ingredients", "composition", "osszetetel", "osszetevok"],
