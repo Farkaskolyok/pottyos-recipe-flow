@@ -1040,10 +1040,7 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
           <Button
             variant="outline"
             className="rounded-full"
-            onClick={() => {
-              exportAll([docs.sheet, docs.spec, docs.pack], final);
-              if (final) onFinal?.();
-            }}
+            onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}
           >
             <Download className="size-4" /> Mindhárom tervezet
           </Button>
