@@ -27,6 +27,7 @@ import { useStore } from "@/lib/store";
 import { autoIngredientText, buildDataset } from "@/lib/recipe/engine";
 import { buildDocs, crossCheck, DOC_TITLES } from "@/lib/recipe/documents";
 import { exportAll, exportDocx } from "@/lib/recipe/docx";
+import { signatureSlots, SLOT_ROLE, type SlotKey } from "@/lib/recipe/signatures";
 import {
   approvalBlockers,
   approveProduct,
@@ -1160,13 +1161,15 @@ function ExportButtons({
   docs,
   final = false,
   onFinal,
+  sign,
 }: {
   docs: Docs;
   final?: boolean;
   onFinal?: () => void;
+  sign?: import("@/lib/recipe/docx").ExportSign;
 }) {
   const one = (d: Docs[keyof Docs]) => {
-    exportDocx(d, final);
+    exportDocx(d, final, sign);
     if (final) onFinal?.();
   };
   return (
@@ -1186,7 +1189,7 @@ function ExportButtons({
       <Button
         className="h-12 rounded-full"
         onClick={() => {
-          exportAll([docs.sheet, docs.spec, docs.pack], final);
+          exportAll([docs.sheet, docs.spec, docs.pack], final, sign);
           if (final) onFinal?.();
         }}
       >
@@ -1207,6 +1210,7 @@ function ApproveStep({
   user,
   onCheck,
   onFinalExport,
+  sign,
 }: {
   onFix: (c: Check) => void;
   checks: Check[];
@@ -1218,6 +1222,7 @@ function ApproveStep({
   user: string;
   onCheck: (on: boolean) => void;
   onFinalExport: () => void;
+  sign: import("@/lib/recipe/docx").ExportSign;
 }) {
   const name = ds.basics.productName.display;
   const finalOk = finalExportAllowed(p, ds.counts.error);
@@ -1231,7 +1236,7 @@ function ApproveStep({
           {name} · {p.docVersion} · {p.approvedBy} · {huDate(p.approvedAt ?? p.updatedAt)}
         </p>
         <FourEyes p={p} user={user} onCheck={onCheck} />
-        <ExportButtons docs={docs} final={finalOk} onFinal={onFinalExport} />
+        <ExportButtons docs={docs} final={finalOk} onFinal={onFinalExport} sign={sign} />
       </Panel>
     );
   const has = (ids: string[]) => ds.checks.filter((c) => ids.includes(c.id) && c.level !== "ok");

@@ -28,6 +28,8 @@ export interface Settings {
   aiEnabled?: boolean;
   /** Local AI mapping history (future deterministic rule candidates) */
   aiMappings?: import("./ai").MappingStat[];
+  /** Local user profiles with their own JPG signature */
+  users?: import("./signatures").UserProfile[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {

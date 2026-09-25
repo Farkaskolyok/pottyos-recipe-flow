@@ -13,6 +13,7 @@ import { createBackup, downloadBackup, parseBackup, restoreBackup } from "@/lib/
 import { templatesStoredLocally } from "@/lib/recipe/docxTemplate";
 import type { State } from "@/lib/store";
 import { PageHeader, Panel } from "@/components/rf/ui";
+import { SignatureProfile } from "@/components/rf/SignatureProfile";
 
 export const Route = createFileRoute("/beallitasok")({
   head: () => ({
@@ -176,6 +177,7 @@ function SettingsPage() {
         </Panel>
         <Panel className="space-y-4">
           {field("userName", "Felhasználó neve")}
+          <SignatureProfile />
           <label className="flex items-center justify-between gap-4">
             <span>
               <span className="block font-medium">Adminisztrátori nézet</span>
