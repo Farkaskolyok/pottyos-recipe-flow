@@ -434,12 +434,22 @@ function ProductPage() {
             onCheck={(on) =>
               save(on ? checkProduct(p, store.settings.userName) : uncheckProduct(p))
             }
-            onFinalExport={() =>
-              save({
-                ...p,
-                audit: addAudit(p, store.settings.userName, "Végleges dokumentumok exportálva"),
-              })
-            }
+            sign={{ slots: signatureSlots(p, store.settings.users ?? [], true) }}
+            onFinalExport={() => {
+              const slots = signatureSlots(p, store.settings.users ?? [], true);
+              let a = addAudit(p, store.settings.userName, "Végleges dokumentumok exportálva");
+              for (const [k, v] of Object.entries(slots))
+                if (v?.image)
+                  a = [
+                    ...a,
+                    {
+                      at: new Date().toISOString(),
+                      by: v.name,
+                      text: `Aláírva: ${v.name} · ${SLOT_ROLE[k as SlotKey]} · ${p.docVersion}`,
+                    },
+                  ];
+              save({ ...p, audit: a });
+            }}
             onApprove={() => {
               save(bump(approveProduct(p, store.settings.userName), "Jóváhagyva"));
             }}
