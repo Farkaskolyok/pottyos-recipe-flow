@@ -2,6 +2,11 @@ import JSZip from "jszip";
 import { idbAvailable, idbGet, idbPut, STORES } from "@/lib/idb";
 import type { Destination } from "./engine";
 import type { Segment } from "./engine";
+import type { SigImage, SlotKey } from "./signatures";
+
+function drawing(rid: string, id: number, im: SigImage, name: string) {
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${im.cx}" cy="${im.cy}"/><wp:docPr id="${id}" name="${name}" descr="${name}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${im.cx}" cy="${im.cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
 
 /*
  * TEMPLATE-BASED WORD GENERATION
@@ -59,7 +64,7 @@ function fillXml(xml: string, fields: Record<string, string>, rich: Record<strin
 }
 
 /** Bump when the master .docx files in /public/templates are regenerated. */
-export const TEMPLATE_VERSION = "2026-09-24.1";
+export const TEMPLATE_VERSION = "2026-09-25.1";
 
 interface StoredTemplate {
   version: string;
@@ -126,9 +131,46 @@ export async function fillMaster(
   kind: Destination,
   fields: Record<string, string>,
   rich: Record<string, Segment[]> = {},
-  opts: { draft?: boolean } = {},
+  opts: { draft?: boolean; signatures?: Partial<Record<SlotKey, SigImage>> } = {},
 ) {
   const zip = await JSZip.loadAsync(await loadMaster(kind));
+  const sigs = opts.draft ? {} : (opts.signatures ?? {});
+  let relAdd = "";
+  let docXml = await zip.file("word/document.xml")!.async("string");
+  let nId = 9000;
+  for (const k of ["CREATED", "CHECKED", "APPROVED"] as SlotKey[]) {
+    const re = new RegExp(
+      `<w:r>(?:(?!</w:r>).)*?\\{\\{${k}_SIGNATURE\\}\\}(?:(?!</w:r>).)*?</w:r>`,
+      "s",
+    );
+    const im = sigs[k];
+    if (!im || !re.test(docXml)) continue;
+    const rid = `rIdSig${k}`;
+    const media = `media/signature_${k.toLowerCase()}.jpg`;
+    zip.file(`word/${media}`, im.bytes);
+    relAdd += `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${media}"/>`;
+    docXml = docXml.replace(re, drawing(rid, nId++, im, `Aláírás ${k}`));
+  }
+  zip.file("word/document.xml", docXml);
+  if (relAdd) {
+    const rp = "word/_rels/document.xml.rels";
+    zip.file(
+      rp,
+      (await zip.file(rp)!.async("string")).replace(
+        "</Relationships>",
+        relAdd + "</Relationships>",
+      ),
+    );
+    const cp = "[Content_Types].xml";
+    const ct = await zip.file(cp)!.async("string");
+    if (!/Extension="jpg"/i.test(ct))
+      zip.file(
+        cp,
+        ct
+          .replace("<Types", "<Types")
+          .replace(/(<Types[^>]*>)/, '$1<Default Extension="jpg" ContentType="image/jpeg"/>'),
+      );
+  }
   const parts = Object.keys(zip.files).filter((n) =>
     /^word\/(document|header\d+|footer\d+)\.xml$/.test(n),
   );
@@ -275,6 +317,10 @@ export const MASTER_PLACEHOLDERS: Record<Destination, string[]> = {
   sheet: [
     ...AL,
     ...N,
+    "APPROVED_DATE",
+    "APPROVED_SIGNATURE",
+    "CREATED_DATE",
+    "CREATED_SIGNATURE",
     "approver",
     "description",
     "effectiveDate",
@@ -318,6 +364,9 @@ export const MASTER_PLACEHOLDERS: Record<Destination, string[]> = {
     ...AL,
     "al_licorice",
     ...N,
+    "CHECKED_SIGNATURE",
+    "CREATED_DATE",
+    "CREATED_SIGNATURE",
     "acceptanceRange",
     "caseGross",
     "caseNet",
