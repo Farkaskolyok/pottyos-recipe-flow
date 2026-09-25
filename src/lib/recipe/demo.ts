@@ -228,6 +228,9 @@ export function seedProducts(dict: DictionaryEntry[], user: string): Product[] {
   cocoa.status = "approved";
   cocoa.docVersion = "v1.2";
   cocoa.approvedBy = "Demo minőségügy";
+  cocoa.checkedBy = "Demo ellenőr";
+  cocoa.checkedAt = day(3);
+  cocoa.approvedAt = day(3);
   cocoa.overrides.marketingName = {
     value: "Kakaós túródesszert",
     by: user,

@@ -1021,7 +1021,7 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
                 className="rounded-full"
                 onClick={() => exportDocx(docs[k])}
               >
-                <Download className="size-4" /> Word letöltése
+                <Download className="size-4" /> Tervezet letöltése
               </Button>
             </li>
           ))}
@@ -1030,9 +1030,12 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
           <Button
             variant="outline"
             className="rounded-full"
-            onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}
+            onClick={() => {
+          exportAll([docs.sheet, docs.spec, docs.pack], final);
+          if (final) onFinal?.();
+        }}
           >
-            <Download className="size-4" /> Mindhárom letöltése
+            <Download className="size-4" /> Mindhárom tervezet
           </Button>
           <Button className="rounded-full" onClick={onApprove}>
             Jóváhagyás
@@ -1181,7 +1184,10 @@ function ExportButtons({
       </Button>
       <Button
         className="h-12 rounded-full"
-        onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}
+        onClick={() => {
+          exportAll([docs.sheet, docs.spec, docs.pack], final);
+          if (final) onFinal?.();
+        }}
       >
         <Download className="size-4" /> Összes dokumentum exportálása
       </Button>
