@@ -309,7 +309,52 @@ function legacyDocBlocks(buf: ArrayBuffer): Block[] {
       cur = "";
     }
   }
-  return runs.filter((r) => /[a-zA-Z]{3}/.test(r)).map((text) => ({ text }));
+  const seen = new Set<string>();
+  return runs
+    .map((r) => r.replace(/\s+/g, " ").trim())
+    .filter((r) => {
+      if (!isReadableLegacyText(r) || seen.has(r)) return false;
+      seen.add(r);
+      return true;
+    })
+    .map((text) => ({ text }));
+}
+
+const LEGACY_META =
+  /(ÿ{2,}|\bproperties\b|urn:schemas|schemas-microsoft|customxml|clrmap|datastoreitem|xmlns|mailto:|http:\/\/|https:\/\/|\.xml\b|\bole\b|root entry|summaryinformation|documentsummary|worddocument|compobj|normal\.dot|times new roman|msworddoc|word\.document|\bstyles?\b.*\bdefault\b|\[content_types\]|theme\/|rels\b)/i;
+
+/** Strict human-language filter for legacy .doc byte-scan fragments. */
+export function isReadableLegacyText(t: string): boolean {
+  const s = t.trim();
+  if (s.length < 4 || s.length > 400) return false;
+  if (LEGACY_META.test(s)) return false;
+  if (/ÿ/.test(s)) return false;
+  const letters = (s.match(/[A-Za-zÀ-ž]/g) ?? []).length;
+  const symbols = (s.match(/[^A-Za-zÀ-ž0-9\s.,:;/()%+\-–°<>=]/g) ?? []).length;
+  if (letters / s.length < 0.5) return false;
+  if (symbols / s.length > 0.1) return false;
+  // sequential ASCII runs (character tables)
+  let seq = 0;
+  for (let i = 1; i < s.length; i++) {
+    if (s.charCodeAt(i) === s.charCodeAt(i - 1) + 1) {
+      if (++seq >= 5) return false;
+    } else seq = 0;
+  }
+  const words = s.split(/[\s:/,;()]+/).filter((w) => /^[A-Za-zÀ-ž]{2,}$/.test(w));
+  if (!words.length) return false;
+  // words must look like words: contain a vowel and not be excessively long
+  const good = words.filter((w) => /[aeiouáéíóöőúüűAEIOUÁÉÍÓÖŐÚÜŰy]/.test(w) && w.length <= 25);
+  if (good.length / words.length < 0.7) return false;
+  // mixed-case garbage like "aBcDeF"
+  if (words.some((w) => /[a-z][A-Z][a-z][A-Z]/.test(w))) return false;
+  return true;
+}
+
+const BUSINESS_TERMS =
+  /(product|termék|termek|ingredient|összetev|osszetev|alapanyag|composition|flavou?r|aroma|íz|colou?r|szín|szin|preservative|tartósít|tartosit|carrier|bearer|hordozó|hordozo|allerg|storage|tárol|tarol|transport|szállít|szallit|shelf|minőség|minoseg|eltarthat|quality|ph\b|moisture|nedvesség|manufactur|gyártó|gyarto|supplier|szállító|beszállító|regulation|rendelet|\d{2,4}\/\d{4}\/(eu|ek|egk))/i;
+
+export function isBusinessRelevant(t: string): boolean {
+  return BUSINESS_TERMS.test(t);
 }
 
 function sheetBlocks(buf: ArrayBuffer): Block[] {
@@ -428,6 +473,18 @@ const FIELD_LABELS: {
     key: "s.taste",
     label: "Íz",
     aliases: ["taste", "flavour", "flavor", "iz"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "composition.carrier",
+    label: "Hordozó",
+    aliases: ["hordozo", "bearer", "carrier"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "composition.preservative",
+    label: "Tartósítószer",
+    aliases: ["preservative", "preservatives", "tartositoszer", "tartosito"],
     outputs: ["sheet", "spec"],
   },
   {
@@ -617,14 +674,19 @@ export function isNoiseText(t: string) {
   if (/^(?:tel|phone|fax|e-?mail|telefon|mobil|mobile|t\s?\/\s?f|m)\b\.?\s*:/i.test(x)) return true;
   if (/^(?:tel|phone|fax|e-?mail|telefon)\b/i.test(x)) return true;
   // contact person + phone number ("Csonka Attila M: +36 30-251-6024")
-  if (/\b(?:m|t|f|tel|mob|mobil|phone|fax|t\s?\/\s?f)\.?\s*:\s*\+?\d[\d\s()/-]{6,}$/i.test(x)) return true;
-  if (/\+?\d{2}[\s()-]*\d{1,3}[\s/-]*\d{3}[\s-]*\d{3,4}\s*$/.test(x) && x.replace(/[^\p{L}]/gu, "").length < 30)
+  if (/\b(?:m|t|f|tel|mob|mobil|phone|fax|t\s?\/\s?f)\.?\s*:\s*\+?\d[\d\s()/-]{6,}$/i.test(x))
+    return true;
+  if (
+    /\+?\d{2}[\s()-]*\d{1,3}[\s/-]*\d{3}[\s-]*\d{3,4}\s*$/.test(x) &&
+    x.replace(/[^\p{L}]/gu, "").length < 30
+  )
     return true;
   // fill-in placeholders ("....... expertise : pl: OÉTI, other")
   if (/\.{5,}|_{5,}|…{2,}/.test(x)) return true;
   // allergen table legends / category headers
   if (/jelenl[ée]t\s*\/?\s*presence|mentess[ée]g\s*\/?\s*freeness/i.test(x)) return true;
-  if (/^(?:di[óo]f[ée]l[ée]k|sort of nuts|nuts|gabonaf[ée]l[ée]k|cereals)\b[^:]*:/i.test(x)) return true;
+  if (/^(?:di[óo]f[ée]l[ée]k|sort of nuts|nuts|gabonaf[ée]l[ée]k|cereals)\b[^:]*:/i.test(x))
+    return true;
   if ((x.match(/[^\p{L}\p{N}\s.,:;%°()/+\-–<>=]/gu)?.length ?? 0) > x.length * 0.3) return true;
   if (/^(?:aláírás|signature|bélyegző|stamp|p\.?\s?h\.?)\b/i.test(x)) return true;
   // standard identifiers only (e.g. "MSZ EN ISO 6579:2006")
@@ -696,7 +758,7 @@ function startsWithAlias(h: string, aliases: string[]) {
   return aliases.find((a) => h === a || h.startsWith(a + " "));
 }
 
-export function extractFromBlocks(blocks: Block[]) {
+export function extractFromBlocks(blocks: Block[], opts: { legacy?: boolean } = {}) {
   const fields: ExtractedField[] = [];
   const regulatory: RegRef[] = [];
   const unknown: UnknownItem[] = [];
@@ -797,6 +859,7 @@ export function extractFromBlocks(blocks: Block[]) {
         unknown.length < 25 &&
         lv[1].length > 2 &&
         !isNoiseText(b.text) &&
+        (!opts.legacy || (isReadableLegacyText(b.text) && isBusinessRelevant(b.text))) &&
         !unknown.some((u) => norm(u.text) === k)
       )
         unknown.push({ id: uid(), text: txt, page: b.page });
@@ -850,6 +913,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
         blocks = legacyDocBlocks(buf);
         legacyPartial = true;
         sf.warnings.push(LEGACY_DOC_WARNING);
+        sf.warnings.push("Részlegesen olvasható régi Word dokumentum");
         sf.warnings.push(
           "A dokumentum csak részlegesen olvasható. A véglegesítés előtt ellenőrzés szükséges.",
         );
@@ -865,7 +929,7 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
       );
       return sf;
     }
-    const x = extractFromBlocks(blocks);
+    const x = extractFromBlocks(blocks, { legacy: legacyPartial });
     Object.assign(sf, x);
     sf.detectedMaterial = x.fields.find((f) => f.key === "product_description")?.value;
     // Best-effort byte scanning of legacy .doc can NEVER make the file validated.
