@@ -35,6 +35,8 @@ import { EditProvider, InlineField, type EditApi } from "@/components/rf/InlineF
 import { cn } from "@/lib/utils";
 import { ProductActions } from "@/components/rf/ProductActions";
 import { SourcesStep } from "@/components/rf/SourcesStep";
+import { SpecDrawer, SpecSummary, specFiles, specStats } from "@/components/rf/SpecOverview";
+import type { SourceFile } from "@/lib/recipe/sources";
 import { openSource, recipeFileId } from "@/lib/recipe/sources";
 import {
   blockingFor,
@@ -467,6 +469,7 @@ function IngredientsStep({
 }) {
   const { dictionary, upsertEntry } = useStore();
   const [active, setActive] = useState<ResolvedIngredient | null>(null);
+  const [specOpen, setSpecOpen] = useState<SourceFile | null>(null);
   const byId = new Map(dictionary.map((d) => [d.id, d]));
   const sorted = [...p.ingredients].sort(
     (a, b) =>
@@ -486,19 +489,25 @@ function IngredientsStep({
       ),
     );
 
+  const specs = specFiles(p);
   return (
     <Panel>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-bold">Alapanyagok</h2>
-          <p className="text-sm text-muted-foreground">
-            {pending ? `${pending} alapanyag vár döntésre.` : "Minden alapanyag felismerve."}
+      <div className="mb-4 space-y-3">
+        <h2 className="text-lg font-bold">Alapanyagok</h2>
+        <div className="rounded-xl border px-4 py-3">
+          <div className="font-semibold">Recept alapanyagok</div>
+          <p className="text-sm">
+            {pending
+              ? `${pending} recept-alapanyag vár döntésre`
+              : "✓ Minden recept-alapanyag felismerve"}
           </p>
         </div>
+        <SpecSummary p={p} />
       </div>
       <ul data-anchor="ingredients" className="divide-y rounded-xl border">
         {sorted.map((i) => {
           const e = i.entryId ? byId.get(i.entryId) : undefined;
+          const spec = specs.find((f) => f.linkRow === i.raw.row && f.linkState !== "rejected");
           return (
             <li
               key={i.raw.row}
@@ -520,6 +529,23 @@ function IngredientsStep({
                     )}
                   </div>
                 )}
+                <button
+                  type="button"
+                  disabled={!spec}
+                  onClick={() => spec && setSpecOpen(spec)}
+                  className={cn(
+                    "mt-1 block text-left text-xs",
+                    spec ? "text-primary underline-offset-2 hover:underline" : "text-muted-foreground",
+                  )}
+                >
+                  {spec
+                    ? `Kapcsolt specifikáció: ${spec.name} · ${spec.fields.length} mező · ${
+                        specStats(spec).review + specStats(spec).unclassified
+                          ? `! ${specStats(spec).review + specStats(spec).unclassified} ellenőrizendő`
+                          : "✓"
+                      }${spec.linkState === "suggested" ? " (bizonytalan kapcsolat)" : ""}`
+                    : "Nincs kapcsolt specifikáció"}
+                </button>
                 {i.deferred && (
                   <div className="mt-1 text-xs font-semibold text-destructive">
                     Későbbi ellenőrzésre félretéve
@@ -558,6 +584,7 @@ function IngredientsStep({
           );
         })}
       </ul>
+      <SpecDrawer file={specOpen} onClose={() => setSpecOpen(null)} />
       <ResolveDialog
         ing={active}
         dictionary={dictionary}

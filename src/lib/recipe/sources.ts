@@ -395,6 +395,48 @@ const FIELD_LABELS: {
     outputs: ["internal"],
   },
   {
+    key: "general_description",
+    label: "Általános leírás",
+    aliases: ["general description", "description", "altalanos leiras", "termekleiras", "leiras"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "s.appearance",
+    label: "Megjelenés",
+    aliases: ["appearance", "megjelenes", "kulso"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "s.consistency",
+    label: "Állag",
+    aliases: ["consistency", "texture", "allag"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "s.smell",
+    label: "Illat",
+    aliases: ["smell", "odour", "odor", "illat", "szag"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "s.taste",
+    label: "Íz",
+    aliases: ["taste", "flavour", "flavor", "iz"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "gmo",
+    label: "GMO státusz",
+    aliases: ["gmo status", "gmo", "gm free", "gmo free", "genetically modified", "gmo mentes"],
+    outputs: ["sheet", "spec"],
+  },
+  {
+    key: "food_safety",
+    label: "Élelmiszerbiztonság",
+    aliases: ["food safety", "haccp", "elelmiszerbiztonsag", "foreign bodies", "idegen anyag"],
+    outputs: ["sheet", "spec"],
+  },
+  {
     key: "composition",
     label: "Összetétel",
     aliases: ["ingredients", "composition", "osszetetel", "osszetevok"],
@@ -490,9 +532,23 @@ const QUALITY_ALIASES: { key: string; label: string; unit: string; aliases: stri
     key: "q.density",
     label: "Sűrűség",
     unit: "kg/dm3",
-    aliases: ["density", "consistency", "suruseg"],
+    aliases: ["density", "suruseg"],
   },
   { key: "q.moisture", label: "Nedvességtartalom", unit: "%", aliases: ["moisture", "nedvesseg"] },
+  { key: "q.viscosity", label: "Viszkozitás", unit: "", aliases: ["viscosity", "viszkozitas"] },
+  { key: "q.fat", label: "Zsírtartalom", unit: "%", aliases: ["fat content", "zsirtartalom"] },
+  {
+    key: "q.melting",
+    label: "Olvadáspont",
+    unit: "°C",
+    aliases: ["melting point", "olvadaspont", "slip melting point"],
+  },
+  {
+    key: "q.entero",
+    label: "Enterobacteriaceae",
+    unit: "CFU/g",
+    aliases: ["enterobacteriaceae", "enterobacteriaceae count"],
+  },
   {
     key: "q.tpc",
     label: "Összes csíraszám",
@@ -519,7 +575,7 @@ const QUALITY_ALIASES: { key: string; label: string; unit: string; aliases: stri
     aliases: ["s aureus", "staphylococcus aureus", "koagulaz pozitiv staphylococcus"],
   },
 ];
-const MICRO = new Set(["q.tpc", "q.yeast", "q.salmonella", "q.ecoli", "q.saureus"]);
+const MICRO = new Set(["q.tpc", "q.yeast", "q.salmonella", "q.ecoli", "q.saureus", "q.entero"]);
 
 /* ---------- source text noise: stored as source info, never a user task ---------- */
 const STD_REF =
