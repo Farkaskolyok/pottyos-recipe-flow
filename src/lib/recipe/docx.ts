@@ -269,8 +269,11 @@ function download(blob: Blob, name: string) {
 }
 
 /** Authoritative output: approved master Word template filled with the current dataset. */
-export async function exportDocx(d: DocModel) {
-  download(await fillMaster(d.kind, d.fields, d.rich), d.fileName);
+export async function exportDocx(d: DocModel, final = false) {
+  download(
+    await fillMaster(d.kind, d.fields, d.rich, { draft: !final }),
+    final ? d.fileName : `TERVEZET_${d.fileName}`,
+  );
 }
 
 /** Legacy generic rebuild, kept only as an internal fallback (not used by the export buttons). */
@@ -278,9 +281,9 @@ export async function exportGenericDocx(d: DocModel) {
   download(await Packer.toBlob(docModelToDocument(d)), d.fileName);
 }
 
-export async function exportAll(docs: DocModel[]) {
+export async function exportAll(docs: DocModel[], final = false) {
   for (const d of docs) {
-    await exportDocx(d);
+    await exportDocx(d, final);
     await new Promise((r) => setTimeout(r, 300));
   }
 }
