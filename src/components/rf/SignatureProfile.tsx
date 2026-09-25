@@ -34,7 +34,10 @@ export function SignatureProfile() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>Szerepkör</Label>
-          <Select value={mine?.role ?? "KÉSZÍTŐ"} onValueChange={(v) => patch({ role: v as SignRole })}>
+          <Select
+            value={mine?.role ?? "KÉSZÍTŐ"}
+            onValueChange={(v) => patch({ role: v as SignRole })}
+          >
             <SelectTrigger className="mt-1" aria-label="Szerepkör">
               <SelectValue />
             </SelectTrigger>
@@ -82,7 +85,11 @@ export function SignatureProfile() {
               Feltöltés
             </Button>
             {mine?.signatureImage && (
-              <Button size="sm" variant="ghost" onClick={() => patch({ signatureImage: undefined })}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => patch({ signatureImage: undefined })}
+              >
                 Törlés
               </Button>
             )}

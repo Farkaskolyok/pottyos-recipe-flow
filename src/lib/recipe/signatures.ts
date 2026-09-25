@@ -106,7 +106,11 @@ export function signatureSlots(p: Product, users: UserProfile[], final: boolean)
 }
 
 /** Word fields: {{X_BY}}, {{X_DATE}}; plus today's local date for {{date}} on final export. */
-export function signatureFields(slots: Partial<Record<SlotKey, Slot>>, final: boolean, now = new Date()) {
+export function signatureFields(
+  slots: Partial<Record<SlotKey, Slot>>,
+  final: boolean,
+  now = new Date(),
+) {
   const f: Record<string, string> = {};
   for (const k of ["CREATED", "CHECKED", "APPROVED"] as SlotKey[]) {
     f[`${k}_BY`] = slots[k]?.name ?? "";

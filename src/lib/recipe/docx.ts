@@ -276,7 +276,8 @@ export interface ExportSign {
 export async function exportDocx(d: DocModel, final = false, sign?: ExportSign) {
   const slots = sign?.slots ?? {};
   const images: Partial<Record<SlotKey, SigImage>> = {};
-  if (final) for (const [k, v] of Object.entries(slots)) if (v?.image) images[k as SlotKey] = v.image;
+  if (final)
+    for (const [k, v] of Object.entries(slots)) if (v?.image) images[k as SlotKey] = v.image;
   download(
     await fillMaster(d.kind, { ...d.fields, ...signatureFields(slots, final) }, d.rich, {
       draft: !final,

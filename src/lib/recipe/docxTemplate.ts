@@ -139,7 +139,10 @@ export async function fillMaster(
   let docXml = await zip.file("word/document.xml")!.async("string");
   let nId = 9000;
   for (const k of ["CREATED", "CHECKED", "APPROVED"] as SlotKey[]) {
-    const re = new RegExp(`<w:r>(?:(?!</w:r>).)*?\\{\\{${k}_SIGNATURE\\}\\}(?:(?!</w:r>).)*?</w:r>`, "s");
+    const re = new RegExp(
+      `<w:r>(?:(?!</w:r>).)*?\\{\\{${k}_SIGNATURE\\}\\}(?:(?!</w:r>).)*?</w:r>`,
+      "s",
+    );
     const im = sigs[k];
     if (!im || !re.test(docXml)) continue;
     const rid = `rIdSig${k}`;
@@ -151,11 +154,22 @@ export async function fillMaster(
   zip.file("word/document.xml", docXml);
   if (relAdd) {
     const rp = "word/_rels/document.xml.rels";
-    zip.file(rp, (await zip.file(rp)!.async("string")).replace("</Relationships>", relAdd + "</Relationships>"));
+    zip.file(
+      rp,
+      (await zip.file(rp)!.async("string")).replace(
+        "</Relationships>",
+        relAdd + "</Relationships>",
+      ),
+    );
     const cp = "[Content_Types].xml";
     const ct = await zip.file(cp)!.async("string");
     if (!/Extension="jpg"/i.test(ct))
-      zip.file(cp, ct.replace("<Types", "<Types").replace(/(<Types[^>]*>)/, '$1<Default Extension="jpg" ContentType="image/jpeg"/>'));
+      zip.file(
+        cp,
+        ct
+          .replace("<Types", "<Types")
+          .replace(/(<Types[^>]*>)/, '$1<Default Extension="jpg" ContentType="image/jpeg"/>'),
+      );
   }
   const parts = Object.keys(zip.files).filter((n) =>
     /^word\/(document|header\d+|footer\d+)\.xml$/.test(n),
