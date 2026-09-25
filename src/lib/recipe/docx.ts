@@ -1,3 +1,4 @@
+import { signatureFields, type SigImage, type Slot, type SlotKey } from "./signatures";
 import {
   AlignmentType,
   BorderStyle,
@@ -269,9 +270,18 @@ function download(blob: Blob, name: string) {
 }
 
 /** Authoritative output: approved master Word template filled with the current dataset. */
-export async function exportDocx(d: DocModel, final = false) {
+export interface ExportSign {
+  slots: Partial<Record<SlotKey, Slot>>;
+}
+export async function exportDocx(d: DocModel, final = false, sign?: ExportSign) {
+  const slots = sign?.slots ?? {};
+  const images: Partial<Record<SlotKey, SigImage>> = {};
+  if (final) for (const [k, v] of Object.entries(slots)) if (v?.image) images[k as SlotKey] = v.image;
   download(
-    await fillMaster(d.kind, d.fields, d.rich, { draft: !final }),
+    await fillMaster(d.kind, { ...d.fields, ...signatureFields(slots, final) }, d.rich, {
+      draft: !final,
+      signatures: images,
+    }),
     final ? d.fileName : `TERVEZET_${d.fileName}`,
   );
 }
@@ -281,9 +291,9 @@ export async function exportGenericDocx(d: DocModel) {
   download(await Packer.toBlob(docModelToDocument(d)), d.fileName);
 }
 
-export async function exportAll(docs: DocModel[], final = false) {
+export async function exportAll(docs: DocModel[], final = false, sign?: ExportSign) {
   for (const d of docs) {
-    await exportDocx(d, final);
+    await exportDocx(d, final, sign);
     await new Promise((r) => setTimeout(r, 300));
   }
 }
