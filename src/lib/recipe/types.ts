@@ -130,7 +130,11 @@ export interface Product {
   updatedAt: string;
   createdBy: string;
   reviewedBy?: string;
+  /** Four-eyes principle: checker must differ from createdBy */
+  checkedBy?: string;
+  checkedAt?: string;
   approvedBy?: string;
+  approvedAt?: string;
   raw: RawRecipe;
   ingredients: ResolvedIngredient[];
   /** manual overrides keyed by field id */

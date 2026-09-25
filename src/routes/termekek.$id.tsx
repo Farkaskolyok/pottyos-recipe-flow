@@ -27,6 +27,17 @@ import { useStore } from "@/lib/store";
 import { autoIngredientText, buildDataset } from "@/lib/recipe/engine";
 import { buildDocs, crossCheck, DOC_TITLES } from "@/lib/recipe/documents";
 import { exportAll, exportDocx } from "@/lib/recipe/docx";
+import {
+  approvalBlockers,
+  approveProduct,
+  audit as addAudit,
+  canCheck,
+  checkerOf,
+  checkProduct,
+  finalExportAllowed,
+  SAME_PERSON,
+  uncheckProduct,
+} from "@/lib/recipe/approval";
 import type { Product, ResolvedIngredient, TracedValue, DictionaryEntry } from "@/lib/recipe/types";
 import { huDate, huNumber, uid } from "@/lib/recipe/format";
 import { LevelIcon, MatchPill, OriginTag, Panel, StatusPill } from "@/components/rf/ui";
@@ -173,7 +184,16 @@ function ProductPage() {
 
   const touch = (next: Product, note: string) => {
     if (next.status === "approved") next.status = "review";
-    save(bump(next, note));
+    const cleared = checkerOf(next) ? uncheckProduct(next) : next;
+    save(
+      bump(
+        {
+          ...cleared,
+          audit: addAudit(cleared, store.settings.userName, `Termék módosítva: ${note}`),
+        },
+        note,
+      ),
+    );
   };
   const getValue = (key: string): TracedValue | undefined => {
     if (key === "ingredientText")
@@ -409,18 +429,18 @@ function ProductPage() {
             onBack={() => setStep("Ellenőrzés")}
             onFix={goFix}
             checks={checks}
+            user={store.settings.userName}
+            onCheck={(on) =>
+              save(on ? checkProduct(p, store.settings.userName) : uncheckProduct(p))
+            }
+            onFinalExport={() =>
+              save({
+                ...p,
+                audit: addAudit(p, store.settings.userName, "Végleges dokumentumok exportálva"),
+              })
+            }
             onApprove={() => {
-              save(
-                bump(
-                  {
-                    ...p,
-                    status: "approved",
-                    approvedBy: store.settings.userName,
-                    reviewedBy: p.reviewedBy ?? store.settings.userName,
-                  },
-                  "Jóváhagyva",
-                ),
-              );
+              save(bump(approveProduct(p, store.settings.userName), "Jóváhagyva"));
             }}
           />
         )}
@@ -535,7 +555,9 @@ function IngredientsStep({
                   onClick={() => spec && setSpecOpen(spec)}
                   className={cn(
                     "mt-1 block text-left text-xs",
-                    spec ? "text-primary underline-offset-2 hover:underline" : "text-muted-foreground",
+                    spec
+                      ? "text-primary underline-offset-2 hover:underline"
+                      : "text-muted-foreground",
                   )}
                 >
                   {spec
@@ -1009,7 +1031,7 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
                 className="rounded-full"
                 onClick={() => exportDocx(docs[k])}
               >
-                <Download className="size-4" /> Word letöltése
+                <Download className="size-4" /> Tervezet letöltése
               </Button>
             </li>
           ))}
@@ -1020,7 +1042,7 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
             className="rounded-full"
             onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}
           >
-            <Download className="size-4" /> Mindhárom letöltése
+            <Download className="size-4" /> Mindhárom tervezet
           </Button>
           <Button className="rounded-full" onClick={onApprove}>
             Jóváhagyás
@@ -1078,25 +1100,95 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
   );
 }
 
-function ExportButtons({ docs }: { docs: Docs }) {
+function FourEyes({
+  p,
+  user,
+  onCheck,
+}: {
+  p: Product;
+  user: string;
+  onCheck: (on: boolean) => void;
+}) {
+  const checker = checkerOf(p);
+  const allowed = canCheck(p, user);
+  const fmt = (s?: string) =>
+    s ? new Date(s).toLocaleString("hu-HU", { dateStyle: "short", timeStyle: "short" }) : "";
+  return (
+    <section aria-label="ELLENŐRZÉS ÉS JÓVÁHAGYÁS" className="my-6 rounded-xl border p-4 text-sm">
+      <h3 className="mb-3 text-xs font-bold tracking-wide text-muted-foreground">
+        ELLENŐRZÉS ÉS JÓVÁHAGYÁS
+      </h3>
+      <dl className="grid grid-cols-[8rem_1fr] gap-y-2">
+        <dt className="text-muted-foreground">Készítő</dt>
+        <dd className="font-medium">{p.createdBy}</dd>
+        <dt className="text-muted-foreground">Ellenőr</dt>
+        <dd>
+          {checker ? (
+            <>
+              <span className="font-medium">{checker}</span>
+              <span className="ml-2 font-semibold text-success">✓ Ellenőrizve</span>
+              <span className="ml-2 text-muted-foreground">{fmt(p.checkedAt)}</span>
+            </>
+          ) : (
+            "—"
+          )}
+        </dd>
+        <dt className="text-muted-foreground">Jóváhagyás</dt>
+        <dd>{p.approvedBy ? `${p.approvedBy} · ${fmt(p.approvedAt)}` : "—"}</dd>
+      </dl>
+      {p.status !== "approved" && (
+        <label className="mt-4 flex items-start gap-2">
+          <Checkbox
+            aria-label="Ellenőriztem a termék adatait és az elkészült dokumentumokat"
+            checked={!!checker}
+            disabled={!allowed}
+            onCheckedChange={(v) => onCheck(!!v)}
+          />
+          <span className={allowed ? "" : "text-muted-foreground"}>
+            Ellenőriztem a termék adatait és az elkészült dokumentumokat
+          </span>
+        </label>
+      )}
+      {!allowed && p.status !== "approved" && (
+        <p className="mt-2 text-xs text-destructive">{SAME_PERSON}</p>
+      )}
+    </section>
+  );
+}
+
+function ExportButtons({
+  docs,
+  final = false,
+  onFinal,
+}: {
+  docs: Docs;
+  final?: boolean;
+  onFinal?: () => void;
+}) {
+  const one = (d: Docs[keyof Docs]) => {
+    exportDocx(d, final);
+    if (final) onFinal?.();
+  };
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      <Button
-        variant="outline"
-        className="h-12 rounded-full"
-        onClick={() => exportDocx(docs.sheet)}
-      >
+      <p className="text-xs font-bold tracking-wide text-muted-foreground sm:col-span-2">
+        {final ? "VÉGLEGES EXPORT" : "TERVEZET EXPORT"}
+      </p>
+      <Button variant="outline" className="h-12 rounded-full" onClick={() => one(docs.sheet)}>
         <Download className="size-4" /> Gyártmánylap letöltése
       </Button>
-      <Button variant="outline" className="h-12 rounded-full" onClick={() => exportDocx(docs.spec)}>
+      <Button variant="outline" className="h-12 rounded-full" onClick={() => one(docs.spec)}>
         <Download className="size-4" /> Késztermék specifikáció letöltése
       </Button>
-      <Button variant="outline" className="h-12 rounded-full" onClick={() => exportDocx(docs.pack)}>
+      <Button variant="outline" className="h-12 rounded-full" onClick={() => one(docs.pack)}>
         <Download className="size-4" /> Szövegterv letöltése
       </Button>
       <Button
         className="h-12 rounded-full"
-        onClick={() => exportAll([docs.sheet, docs.spec, docs.pack])}
+        onClick={() => {
+          exportAll([docs.sheet, docs.spec, docs.pack], final);
+          if (final) onFinal?.();
+        }}
       >
         <Download className="size-4" /> Összes dokumentum exportálása
       </Button>
@@ -1112,6 +1204,9 @@ function ApproveStep({
   onBack,
   onFix,
   checks,
+  user,
+  onCheck,
+  onFinalExport,
 }: {
   onFix: (c: Check) => void;
   checks: Check[];
@@ -1120,8 +1215,12 @@ function ApproveStep({
   docs: Docs;
   onApprove: () => void;
   onBack: () => void;
+  user: string;
+  onCheck: (on: boolean) => void;
+  onFinalExport: () => void;
 }) {
   const name = ds.basics.productName.display;
+  const finalOk = finalExportAllowed(p, ds.counts.error);
   if (p.status === "approved")
     return (
       <Panel className="mx-auto max-w-2xl">
@@ -1129,9 +1228,10 @@ function ApproveStep({
           Jóváhagyva <CheckIcon className="size-6" />
         </p>
         <p className="mb-6 mt-1 text-sm text-muted-foreground">
-          {name} · {p.docVersion} · {p.approvedBy} · {huDate(p.updatedAt)}
+          {name} · {p.docVersion} · {p.approvedBy} · {huDate(p.approvedAt ?? p.updatedAt)}
         </p>
-        <ExportButtons docs={docs} />
+        <FourEyes p={p} user={user} onCheck={onCheck} />
+        <ExportButtons docs={docs} final={finalOk} onFinal={onFinalExport} />
       </Panel>
     );
   const has = (ids: string[]) => ds.checks.filter((c) => ids.includes(c.id) && c.level !== "ok");
@@ -1142,7 +1242,8 @@ function ApproveStep({
     ["Csomagolási szöveg", has(["mkt", "mfr", "txt"])],
     ["Dokumentumok", has(ds.checks.filter((c) => c.id.startsWith("reg-")).map((c) => c.id))],
   ];
-  const blocked = ds.counts.error > 0;
+  const blockers = approvalBlockers(p, ds.counts.error, user);
+  const blocked = blockers.length > 0;
   return (
     <Panel className="mx-auto max-w-2xl">
       <h2 className="text-2xl font-bold">{name}</h2>
@@ -1176,7 +1277,33 @@ function ApproveStep({
           return t ? <span className="text-muted-foreground"> · {t}</span> : null;
         })()}
       </p>
-      {blocked && (
+      <FourEyes p={p} user={user} onCheck={onCheck} />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <span className="self-center text-xs font-bold text-muted-foreground">TERVEZET EXPORT</span>
+        {(["sheet", "spec", "pack"] as const).map((k) => (
+          <Button
+            key={k}
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => exportDocx(docs[k])}
+          >
+            <Download className="size-4" /> {DOC_TITLES[k]}
+          </Button>
+        ))}
+      </div>
+      {blockers
+        .filter((b) => !b.includes("blokkoló"))
+        .map((b) => (
+          <p
+            key={b}
+            role="alert"
+            className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive"
+          >
+            {b}
+          </p>
+        ))}
+      {ds.counts.error > 0 && (
         <div className="mb-4">
           <p className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">
             Jóváhagyás csak a hibák javítása után lehetséges.

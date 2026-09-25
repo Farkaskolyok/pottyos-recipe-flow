@@ -23,6 +23,7 @@
 - [ ] Full-page UI tests for upload/export screens (covered by manual browser run for now)
 
 ## Final hardening pass
+
 - [x] Offline master templates (IndexedDB, versioned) — verified offline export of all three
 - [x] Hard-fail historical leak test (hashed denylist) + exact placeholder tests; builder exits on leak
 - [x] Orphaned blob deletion (removed file, deleted product, demo reset, start-up purge)
@@ -35,3 +36,6 @@
 - [x] Demó mód / Éles teszt switch (isDemo records, hidden demo UI, no demo seeding in live, tests)
 - [x] AI adatellenőrzés fallback (admin-approved external AI, snippets only, confidence routing, traceability, mapping history + rule candidates) + Kimeneti dokumentumok teljessége
 - [ ] User: enable AI in Beállítások and test on real supplier files (after publish)
+- [x] Per-product (1 darab) nutrition in Szövegterv + missing net weight block
+- [x] Four-eyes review (Készítő/Ellenőr/Jóváhagyó), TERVEZET vs VÉGLEGES EXPORT, audit
+- [x] Fix CI lint failure (commit 23dfe01)

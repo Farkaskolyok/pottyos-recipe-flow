@@ -126,6 +126,7 @@ export async function fillMaster(
   kind: Destination,
   fields: Record<string, string>,
   rich: Record<string, Segment[]> = {},
+  opts: { draft?: boolean } = {},
 ) {
   const zip = await JSZip.loadAsync(await loadMaster(kind));
   const parts = Object.keys(zip.files).filter((n) =>
@@ -133,7 +134,13 @@ export async function fillMaster(
   );
   for (const n of parts) {
     const xml = await zip.file(n)!.async("string");
-    zip.file(n, fillXml(xml, fields, rich));
+    let out = fillXml(xml, fields, rich);
+    if (opts.draft && n === "word/document.xml")
+      out = out.replace(
+        /<w:body>/,
+        '<w:body><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="C00000"/><w:sz w:val="32"/></w:rPr><w:t>TERVEZET</w:t></w:r></w:p>',
+      );
+    zip.file(n, out);
   }
   return zip.generateAsync({
     type: "blob",
