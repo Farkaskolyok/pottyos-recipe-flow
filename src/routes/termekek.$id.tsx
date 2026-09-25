@@ -187,7 +187,10 @@ function ProductPage() {
     const cleared = checkerOf(next) ? uncheckProduct(next) : next;
     save(
       bump(
-        { ...cleared, audit: addAudit(cleared, store.settings.userName, `Termék módosítva: ${note}`) },
+        {
+          ...cleared,
+          audit: addAudit(cleared, store.settings.userName, `Termék módosítva: ${note}`),
+        },
         note,
       ),
     );
@@ -427,9 +430,14 @@ function ProductPage() {
             onFix={goFix}
             checks={checks}
             user={store.settings.userName}
-            onCheck={(on) => save(on ? checkProduct(p, store.settings.userName) : uncheckProduct(p))}
+            onCheck={(on) =>
+              save(on ? checkProduct(p, store.settings.userName) : uncheckProduct(p))
+            }
             onFinalExport={() =>
-              save({ ...p, audit: addAudit(p, store.settings.userName, "Végleges dokumentumok exportálva") })
+              save({
+                ...p,
+                audit: addAudit(p, store.settings.userName, "Végleges dokumentumok exportálva"),
+              })
             }
             onApprove={() => {
               save(bump(approveProduct(p, store.settings.userName), "Jóváhagyva"));
@@ -547,7 +555,9 @@ function IngredientsStep({
                   onClick={() => spec && setSpecOpen(spec)}
                   className={cn(
                     "mt-1 block text-left text-xs",
-                    spec ? "text-primary underline-offset-2 hover:underline" : "text-muted-foreground",
+                    spec
+                      ? "text-primary underline-offset-2 hover:underline"
+                      : "text-muted-foreground",
                   )}
                 >
                   {spec
@@ -1031,9 +1041,9 @@ function DocsStep({ docs, onApprove }: { docs: Docs; onApprove: () => void }) {
             variant="outline"
             className="rounded-full"
             onClick={() => {
-          exportAll([docs.sheet, docs.spec, docs.pack], final);
-          if (final) onFinal?.();
-        }}
+              exportAll([docs.sheet, docs.spec, docs.pack], final);
+              if (final) onFinal?.();
+            }}
           >
             <Download className="size-4" /> Mindhárom tervezet
           </Button>
@@ -1127,9 +1137,7 @@ function FourEyes({
           )}
         </dd>
         <dt className="text-muted-foreground">Jóváhagyás</dt>
-        <dd>
-          {p.approvedBy ? `${p.approvedBy} · ${fmt(p.approvedAt)}` : "—"}
-        </dd>
+        <dd>{p.approvedBy ? `${p.approvedBy} · ${fmt(p.approvedAt)}` : "—"}</dd>
       </dl>
       {p.status !== "approved" && (
         <label className="mt-4 flex items-start gap-2">
@@ -1169,11 +1177,7 @@ function ExportButtons({
       <p className="text-xs font-bold tracking-wide text-muted-foreground sm:col-span-2">
         {final ? "VÉGLEGES EXPORT" : "TERVEZET EXPORT"}
       </p>
-      <Button
-        variant="outline"
-        className="h-12 rounded-full"
-        onClick={() => one(docs.sheet)}
-      >
+      <Button variant="outline" className="h-12 rounded-full" onClick={() => one(docs.sheet)}>
         <Download className="size-4" /> Gyártmánylap letöltése
       </Button>
       <Button variant="outline" className="h-12 rounded-full" onClick={() => one(docs.spec)}>
@@ -1280,16 +1284,28 @@ function ApproveStep({
       <div className="mb-4 flex flex-wrap gap-2">
         <span className="self-center text-xs font-bold text-muted-foreground">TERVEZET EXPORT</span>
         {(["sheet", "spec", "pack"] as const).map((k) => (
-          <Button key={k} size="sm" variant="outline" className="rounded-full" onClick={() => exportDocx(docs[k])}>
+          <Button
+            key={k}
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => exportDocx(docs[k])}
+          >
             <Download className="size-4" /> {DOC_TITLES[k]}
           </Button>
         ))}
       </div>
-      {blockers.filter((b) => !b.includes("blokkoló")).map((b) => (
-        <p key={b} role="alert" className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">
-          {b}
-        </p>
-      ))}
+      {blockers
+        .filter((b) => !b.includes("blokkoló"))
+        .map((b) => (
+          <p
+            key={b}
+            role="alert"
+            className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive"
+          >
+            {b}
+          </p>
+        ))}
       {ds.counts.error > 0 && (
         <div className="mb-4">
           <p className="mb-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">

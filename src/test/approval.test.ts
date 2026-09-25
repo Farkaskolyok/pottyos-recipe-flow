@@ -20,7 +20,11 @@ import {
 const dict = DEMO_DICTIONARY;
 const S = DEFAULT_SETTINGS;
 const mk = () =>
-  newProduct(parseWorkbook(buildDemoWorkbook(DEMO_RECIPES[0]), "t.xlsx", 1), dict, "Gergely Kovács");
+  newProduct(
+    parseWorkbook(buildDemoWorkbook(DEMO_RECIPES[0]), "t.xlsx", 1),
+    dict,
+    "Gergely Kovács",
+  );
 
 describe("per-product nutrition", () => {
   it("per product = per100 × weight / 100, rounded with existing rules", () => {
@@ -85,9 +89,7 @@ describe("four-eyes approval", () => {
     const docs = buildDocs(p, buildDataset(p, dict, S), dict, S);
     const text = async (k: "sheet" | "spec" | "pack", draft = false) => {
       const z = await JSZip.loadAsync(
-        await (
-          await fillMaster(k, docs[k].fields, docs[k].rich, { draft })
-        ).arrayBuffer(),
+        await (await fillMaster(k, docs[k].fields, docs[k].rich, { draft })).arrayBuffer(),
       );
       return (await z.file("word/document.xml")!.async("string")).replace(/<[^>]+>/g, "");
     };

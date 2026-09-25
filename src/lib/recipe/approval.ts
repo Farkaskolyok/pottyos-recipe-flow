@@ -3,7 +3,8 @@ import type { Product } from "./types";
 
 export const SAME_PERSON = "A készítő és az ellenőr nem lehet ugyanaz a személy.";
 export const NO_CHECKER = "Az ellenőri megerősítés hiányzik.";
-export const NO_WEIGHT_SERVING = "1 darabra számított tápérték nem számítható – nettó tömeg hiányzik";
+export const NO_WEIGHT_SERVING =
+  "1 darabra számított tápérték nem számítható – nettó tömeg hiányzik";
 
 const norm = (s?: string) => (s ?? "").trim().toLocaleLowerCase("hu");
 export const samePerson = (a?: string, b?: string) => !!norm(a) && norm(a) === norm(b);
