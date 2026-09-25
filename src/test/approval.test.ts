@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import JSZip from "jszip";
 import { parseWorkbook } from "@/lib/recipe/parse";
 import { buildDemoWorkbook, DEMO_RECIPES, newProduct } from "@/lib/recipe/demo";
@@ -6,7 +8,7 @@ import { DEMO_DICTIONARY } from "@/lib/recipe/dictionary";
 import { buildDataset, DEFAULT_SETTINGS } from "@/lib/recipe/engine";
 import { roundNutrient } from "@/lib/recipe/rules";
 import { buildDocs } from "@/lib/recipe/documents";
-import { fillMaster } from "@/lib/recipe/docxTemplate";
+import { fillMaster, MASTER_FILES } from "@/lib/recipe/docxTemplate";
 import {
   approvalBlockers,
   approveProduct,
@@ -16,6 +18,15 @@ import {
   NO_CHECKER,
   SAME_PERSON,
 } from "@/lib/recipe/approval";
+
+beforeAll(() => {
+  vi.stubGlobal("fetch", async (url: string) => {
+    const f = Object.values(MASTER_FILES).find((x) => String(url).endsWith(x.file));
+    if (!f) return new Response("", { status: 404 });
+    const b = readFileSync(resolve(__dirname, "../../public/templates", f.file));
+    return new Response(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer);
+  });
+});
 
 const dict = DEMO_DICTIONARY;
 const S = DEFAULT_SETTINGS;
