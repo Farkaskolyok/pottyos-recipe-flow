@@ -1,4 +1,5 @@
 import { idbClear, idbGet, idbKeys, idbPut, saveFileBlob, STORES, type StoredFile } from "./idb";
+import { saveDownload } from "./platform";
 
 /*
  * LOCAL BACKUP / RESTORE — one structured file saved on this device. No cloud, no network.
@@ -99,10 +100,5 @@ export async function restoreBackup(b: Backup) {
 
 export function downloadBackup(b: Backup) {
   const blob = new Blob([JSON.stringify(b)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `RecipeFlow_mentes_${b.createdAt.slice(0, 10)}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return saveDownload(blob, `RecipeFlow_mentes_${b.createdAt.slice(0, 10)}.json`);
 }

@@ -932,9 +932,11 @@ function OpenBtn({ id }: { id: string }) {
       title="Forrás megnyitása (helyben tárolt eredeti)"
       className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-primary"
       onClick={() =>
-        void openSource(id).then((ok) => {
-          if (!ok) toast.info("Az eredeti fájl nincs eltárolva ezen az eszközön.");
-        })
+        void openSource(id)
+          .then((ok) => {
+            if (!ok) toast.info("Az eredeti fájl nincs eltárolva ezen az eszközön.");
+          })
+          .catch(() => toast.error("A forrásfájl megnyitása nem sikerült."))
       }
     >
       <ExternalLink className="size-4" />

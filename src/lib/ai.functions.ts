@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { isLoopbackUrl } from "./network";
+import { AI_UNAVAILABLE_MESSAGE } from "./platform";
 
 const Input = z.object({
   fields: z.array(z.object({ key: z.string(), label: z.string() })).max(60),
@@ -34,7 +35,7 @@ export const aiAnalyze = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<AiAnalyzeResult> => {
     const baseURL = process.env["AI_BASE_URL"];
     const model = process.env["AI_MODEL"];
-    if (!baseURL || !model) return { ok: false, error: "Az AI szolgáltatás nincs implementálva" };
+    if (!baseURL || !model) return { ok: false, error: AI_UNAVAILABLE_MESSAGE };
     const { localOnly, providerFetch } = await import("./network.server");
     if (localOnly() && !isLoopbackUrl(baseURL))
       return { ok: false, error: "Helyi módban csak helyi AI szolgáltatás használható." };

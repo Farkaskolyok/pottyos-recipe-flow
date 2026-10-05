@@ -1,4 +1,5 @@
 import { saveFileBlob } from "@/lib/idb";
+import { saveDownload } from "@/lib/platform";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, type ReactNode } from "react";
 import type { WorkBook } from "xlsx";
@@ -135,14 +136,13 @@ function NewProduct() {
     setSpecs(d);
   }
 
-  function downloadDemo() {
+  async function downloadDemo() {
     const f = demoFile(DEMO_RECIPES[3]);
-    const url = URL.createObjectURL(f);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = f.name;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      await saveDownload(f, f.name);
+    } catch {
+      toast.error("A mentés nem sikerült.");
+    }
   }
 
   const setType = (id: string, t: SourceType) =>

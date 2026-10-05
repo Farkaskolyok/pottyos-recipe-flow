@@ -21,6 +21,7 @@ import {
 import type { Dataset, Destination } from "@/lib/recipe/engine";
 import type { Product } from "@/lib/recipe/types";
 import { cn } from "@/lib/utils";
+import { AI_UNAVAILABLE_MESSAGE, isDesktop } from "@/lib/platform";
 
 const pct = (c: number) => `${Math.round(c * 100)}%`;
 
@@ -53,6 +54,10 @@ export function AiReview({
     });
 
   async function analyse() {
+    if (isDesktop()) {
+      toast.error(AI_UNAVAILABLE_MESSAGE);
+      return;
+    }
     if (!navigator.onLine) {
       toast.error("Nincs internetkapcsolat.");
       return;
@@ -98,7 +103,9 @@ export function AiReview({
         </div>
         {!enabled ? (
           <p className="text-sm text-muted-foreground">
-            Kikapcsolva. Adminisztrátor kapcsolhatja be: Beállítások → AI adatellenőrzés.
+            {isDesktop()
+              ? AI_UNAVAILABLE_MESSAGE
+              : "Kikapcsolva. Adminisztrátor kapcsolhatja be: Beállítások → AI adatellenőrzés."}
           </p>
         ) : (
           <>

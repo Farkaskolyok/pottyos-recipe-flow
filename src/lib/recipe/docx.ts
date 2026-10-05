@@ -18,6 +18,8 @@ import {
 } from "docx";
 import type { Block, DocModel } from "./documents";
 import { fillMaster } from "./docxTemplate";
+import { saveDownload } from "@/lib/platform";
+import { toast } from "sonner";
 
 const RED = "D6001C";
 const FONT = "Arial";
@@ -260,15 +262,6 @@ export function docModelToDocument(d: DocModel): Document {
   });
 }
 
-function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 /** Authoritative output: approved master Word template filled with the current dataset. */
 export interface ExportSign {
   slots: Partial<Record<SlotKey, Slot>>;
@@ -278,23 +271,29 @@ export async function exportDocx(d: DocModel, final = false, sign?: ExportSign) 
   const images: Partial<Record<SlotKey, SigImage>> = {};
   if (final)
     for (const [k, v] of Object.entries(slots)) if (v?.image) images[k as SlotKey] = v.image;
-  download(
-    await fillMaster(d.kind, { ...d.fields, ...signatureFields(slots, final) }, d.rich, {
-      draft: !final,
-      signatures: images,
-    }),
-    final ? d.fileName : `TERVEZET_${d.fileName}`,
-  );
+  try {
+    return await saveDownload(
+      await fillMaster(d.kind, { ...d.fields, ...signatureFields(slots, final) }, d.rich, {
+        draft: !final,
+        signatures: images,
+      }),
+      final ? d.fileName : `TERVEZET_${d.fileName}`,
+    );
+  } catch {
+    toast.error("A dokumentum mentése nem sikerült.");
+    return false;
+  }
 }
 
 /** Legacy generic rebuild, kept only as an internal fallback (not used by the export buttons). */
 export async function exportGenericDocx(d: DocModel) {
-  download(await Packer.toBlob(docModelToDocument(d)), d.fileName);
+  return saveDownload(await Packer.toBlob(docModelToDocument(d)), d.fileName);
 }
 
 export async function exportAll(docs: DocModel[], final = false, sign?: ExportSign) {
   for (const d of docs) {
-    await exportDocx(d, final, sign);
+    if (!(await exportDocx(d, final, sign))) return false;
     await new Promise((r) => setTimeout(r, 300));
   }
+  return true;
 }

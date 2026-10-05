@@ -1,4 +1,5 @@
 import { deleteFileBlob, loadFileBlob, saveFileBlob } from "@/lib/idb";
+import { isDesktop, openDesktopSource } from "@/lib/platform";
 // Multi-file product package: recipe + supplier / raw material specifications + historical references.
 // All extraction is deterministic and runs in the browser. No file content leaves the device.
 import * as XLSX from "xlsx";
@@ -162,6 +163,12 @@ export async function ensureDemoSourceBlobs(files: SourceFile[]) {
 /** Opens the locally stored original. Returns false when it is not stored on this device. */
 export async function openSource(fileId: string | undefined, page?: number): Promise<boolean> {
   if (!fileId) return false;
+  if (isDesktop()) {
+    const got = await getSourceBlob(fileId);
+    if (!got) return false;
+    await openDesktopSource(got.blob, got.name);
+    return true;
+  }
   const win = window.open("", "_blank");
   const got = await getSourceBlob(fileId);
   if (!got) {
@@ -1177,6 +1184,7 @@ export type OnlineRegResult =
 
 /** Sends ONLY the normalized identifier (e.g. "1169/2011/EU"); no product data ever leaves the device. */
 export async function verifyRegulationOnline(identifier: string): Promise<OnlineRegResult> {
+  if (isDesktop()) return { kind: "offline" };
   if (typeof navigator !== "undefined" && navigator.onLine === false) return { kind: "offline" };
   try {
     const r = await fetch(`/api/public/regulation?id=${encodeURIComponent(identifier)}`);

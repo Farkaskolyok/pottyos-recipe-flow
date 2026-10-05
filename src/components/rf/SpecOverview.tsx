@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -149,7 +150,11 @@ export function SpecDrawer({ file, onClose }: { file: SourceFile | null; onClose
                 size="sm"
                 variant="outline"
                 className="rounded-full"
-                onClick={() => openSource(file.id)}
+                onClick={() =>
+                  void openSource(file.id).catch(() =>
+                    toast.error("A forrásfájl megnyitása nem sikerült."),
+                  )
+                }
               >
                 Forrás megnyitása
               </Button>

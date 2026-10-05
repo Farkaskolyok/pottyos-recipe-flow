@@ -1178,9 +1178,8 @@ function ExportButtons({
   onFinal?: () => void;
   sign?: import("@/lib/recipe/docx").ExportSign;
 }) {
-  const one = (d: Docs[keyof Docs]) => {
-    exportDocx(d, final, sign);
-    if (final) onFinal?.();
+  const one = async (d: Docs[keyof Docs]) => {
+    if ((await exportDocx(d, final, sign)) && final) onFinal?.();
   };
   return (
     <div className="grid gap-2 sm:grid-cols-2">
@@ -1198,9 +1197,9 @@ function ExportButtons({
       </Button>
       <Button
         className="h-12 rounded-full"
-        onClick={() => {
-          exportAll([docs.sheet, docs.spec, docs.pack], final, sign);
-          if (final) onFinal?.();
+        onClick={async () => {
+          if ((await exportAll([docs.sheet, docs.spec, docs.pack], final, sign)) && final)
+            onFinal?.();
         }}
       >
         <Download className="size-4" /> Összes dokumentum exportálása

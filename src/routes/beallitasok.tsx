@@ -14,6 +14,7 @@ import { templatesStoredLocally } from "@/lib/recipe/docxTemplate";
 import type { State } from "@/lib/store";
 import { PageHeader, Panel } from "@/components/rf/ui";
 import { SignatureProfile } from "@/components/rf/SignatureProfile";
+import { AI_UNAVAILABLE_MESSAGE, isDesktop } from "@/lib/platform";
 
 export const Route = createFileRoute("/beallitasok")({
   head: () => ({
@@ -49,7 +50,7 @@ function SettingsPage() {
         categories: store.categories,
       };
       const b = await createBackup(state);
-      downloadBackup(b);
+      if (!(await downloadBackup(b))) return;
       toast.success(`Helyi mentés elkészült (${b.files.length} fájl)`);
     } catch {
       toast.error("A mentés nem sikerült.");
@@ -192,13 +193,13 @@ function SettingsPage() {
           <h2 className="font-bold">AI adatellenőrzés</h2>
           <label className="flex items-center justify-between gap-4">
             <span className="text-sm text-muted-foreground">
-              A beállított AI szolgáltatás csak rövid szövegrészleteket kap, teljes fájlokat és
-              receptúrát soha. Külső szolgáltatóhoz internet szükséges; helyi szolgáltatóval offline
-              is használható. Nélküle minden más működik.
+              {isDesktop()
+                ? AI_UNAVAILABLE_MESSAGE
+                : "A beállított AI szolgáltatás csak rövid szövegrészleteket kap, teljes fájlokat és receptúrát soha. Külső szolgáltatóhoz internet szükséges; helyi szolgáltatóval offline is használható. Nélküle minden más működik."}
             </span>
             <Switch
               checked={store.rawSettings.aiEnabled === true}
-              disabled={!admin}
+              disabled={!admin || isDesktop()}
               onCheckedChange={(on) => {
                 if (on && !window.confirm("Engedélyezed a beállított AI szolgáltatás használatát?"))
                   return;

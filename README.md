@@ -13,6 +13,36 @@ bun run dev
 
 Open http://127.0.0.1:3000. Run `bun run test:run`, `bun run lint`, and `bun run build` to verify changes.
 
+## Windows desktop EXE (Tauri)
+
+`bun run desktop:build` produces `src-tauri/target/x86_64-pc-windows-msvc/release/recipeflow.exe`.
+Copy that single EXE to another folder or Windows x64 computer and double-click it. The frontend,
+fonts, PDF worker, and Word templates are embedded; Node.js, Bun, Rust, and a local HTTP server
+are not required to run it. No installer is generated.
+
+The app uses the Microsoft Edge WebView2 Runtime already installed on Windows. It does not bundle
+a browser or install/download a WebView2 runtime. A computer without WebView2 needs that runtime
+installed separately. See [Tauri's Windows runtime options](https://v2.tauri.app/distribute/windows-installer/#webview2-installation-options).
+
+Build prerequisites are Bun, Node.js 22.12+, Rust with the `x86_64-pc-windows-msvc` toolchain,
+and Visual Studio C++ Build Tools with the Windows SDK. Run `bun install --frozen-lockfile` first.
+Use `bun run desktop:dev` for a desktop development window. `bun run build:desktop` builds the
+static frontend under `.output-desktop/public`; the regular web build remains separate.
+
+Desktop imports, calculations, signatures, reviews, document generation, and backup/restore run
+locally. Downloads use a Windows Save dialog. Source documents open in their Windows default
+application (which is only needed to view those documents, not to import or generate them).
+The demo specification placeholders open as `.txt` files. PDF page hints are not passed to external viewers.
+AI service calls are unavailable and show “Az AI szolgáltatás nincs implementálva”; online
+regulation verification returns the offline result. User-opened web links open in the default browser.
+
+Data persists in `%LOCALAPPDATA%\hu.pottyos.recipeflow\WebView` using WebView2's IndexedDB/localStorage.
+Source-viewing copies live in the app's `sources` cache folder; these copies can be deleted once
+the external viewer is closed. The EXE is portable; its data remains in the current Windows user's profile.
+Desktop and browser data are separate. To move existing data, export a backup in the browser's
+Settings page, then import it in the desktop app's Settings page. Keep this identifier and WebView
+profile path stable across updates, and export backups before replacing the EXE.
+
 ## Local production server
 
 ```powershell

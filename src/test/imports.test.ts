@@ -51,7 +51,7 @@ describe("supporting document imports", () => {
           .join("")}</w:body></w:document>`,
       );
       const bytes = await zip.generateAsync({ type: "uint8array" });
-      const file = new File([bytes], "supplier.DOCX", {
+      const file = new File([Uint8Array.from(bytes)], "supplier.DOCX", {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
 

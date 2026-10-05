@@ -1,5 +1,7 @@
 // Single guarded service-worker registrar. Never registers in dev / preview / iframe.
+import { isDesktop } from "./platform";
 export async function setupPwa() {
+  if (isDesktop()) return;
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   const h = location.hostname;
   let inIframe = true;
