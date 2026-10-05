@@ -30,6 +30,8 @@ export const Route = createFileRoute("/api/public/regulation")({
         if (!m) return json({ kind: "invalid" }, 400);
         const c = candidates(m[1]!, m[2]!);
         if (!c.length) return json({ kind: "invalid" }, 400);
+        const { localOnly } = await import("@/lib/network.server");
+        if (localOnly()) return json({ kind: "offline" });
         const list = c.map((x) => `"${x}"^^<http://www.w3.org/2001/XMLSchema#string>`).join(",");
         const q = `PREFIX cdm: <http://publications.europa.eu/ontology/cdm#> SELECT DISTINCT ?c WHERE { ?w cdm:resource_legal_id_celex ?c . FILTER(?c IN (${list})) } LIMIT 5`;
         try {

@@ -1,6 +1,3 @@
-// AI-assisted document understanding – FALLBACK layer only.
-// Deterministic parsing, calculations, validation and Word generation stay unchanged.
-// AI values are kept separately (origin "ai") and never overwrite source/manual values.
 import type { Product } from "./types";
 import type { Dataset, Destination, Settings } from "./engine";
 

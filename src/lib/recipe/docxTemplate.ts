@@ -8,16 +8,6 @@ function drawing(rid: string, id: number, im: SigImage, name: string) {
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${im.cx}" cy="${im.cy}"/><wp:docPr id="${id}" name="${name}" descr="${name}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${im.cx}" cy="${im.cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
 }
 
-/*
- * TEMPLATE-BASED WORD GENERATION
- * APPROVED MASTER WORD TEMPLATE + CURRENT VALIDATED PRODUCT DATA = FINAL WORD DOCUMENT
- *
- * The three master files in /public/templates were produced from the approved historical company
- * documents: page size, margins, fonts, tables, merged cells, borders, headers, footers, page numbering,
- * signature and revision blocks are kept byte-for-byte. Every historical VALUE was replaced by a
- * {{field}} slot. Nothing is filled from the historical documents — only from the RecipeFlow dataset.
- */
-
 export const MASTER_FILES: Record<Destination, { id: string; file: string }> = {
   sheet: { id: "GYL_MASTER", file: "GYL_MASTER.docx" },
   spec: { id: "SPEC_MASTER", file: "SPEC_MASTER.docx" },

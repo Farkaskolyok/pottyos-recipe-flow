@@ -272,13 +272,15 @@ export const LEGACY_DOC_WARNING = "! Régi Word formátum – ellenőrzés szük
 export async function convertLegacyDocLocally(buf: ArrayBuffer): Promise<ArrayBuffer | null> {
   if (typeof window === "undefined") return null;
   const base = localStorage.getItem("rf.docConverterUrl") || "http://127.0.0.1:8765";
-  if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(base)) return null; // local only
+  const { isLoopbackUrl } = await import("../network");
+  if (!isLoopbackUrl(base)) return null;
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 1500);
   try {
     const r = await fetch(`${base}/convert`, {
       method: "POST",
       body: buf,
+      redirect: "error",
       signal: ctl.signal,
       headers: { "Content-Type": "application/msword" },
     });

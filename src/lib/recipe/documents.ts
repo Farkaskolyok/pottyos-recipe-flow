@@ -3,12 +3,6 @@ import type { Dataset, Segment, Settings, Destination } from "./engine";
 import { huDate, huNumber } from "./format";
 import { regVerified } from "./sources";
 
-/*
- * Three separate MASTER TEMPLATES. Their structure (section order, numbering, tables,
- * signature/revision blocks, static notes) follows the approved historical company documents.
- * Historical VALUES are never used: every dynamic value comes from the current product dataset.
- */
-
 export type Block =
   | { type: "heading"; text: string; level?: 1 | 2 }
   | { type: "title"; lines: string[] }

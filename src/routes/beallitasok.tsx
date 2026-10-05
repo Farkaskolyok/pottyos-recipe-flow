@@ -192,14 +192,15 @@ function SettingsPage() {
           <h2 className="font-bold">AI adatellenőrzés</h2>
           <label className="flex items-center justify-between gap-4">
             <span className="text-sm text-muted-foreground">
-              Külső AI szolgáltatás (Lovable AI). Csak rövid szövegrészletek kerülnek elküldésre,
-              teljes fájlok és receptúra soha. Internet szükséges. Nélküle minden más működik.
+              A beállított AI szolgáltatás csak rövid szövegrészleteket kap, teljes fájlokat és
+              receptúrát soha. Külső szolgáltatóhoz internet szükséges; helyi szolgáltatóval offline
+              is használható. Nélküle minden más működik.
             </span>
             <Switch
               checked={store.rawSettings.aiEnabled === true}
               disabled={!admin}
               onCheckedChange={(on) => {
-                if (on && !window.confirm("Engedélyezed a külső AI szolgáltatás használatát?"))
+                if (on && !window.confirm("Engedélyezed a beállított AI szolgáltatás használatát?"))
                   return;
                 store.setSettings({ ...store.rawSettings, aiEnabled: on });
               }}
