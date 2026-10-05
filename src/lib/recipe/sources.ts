@@ -24,6 +24,8 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
 };
 
 export type FileStatus = "ok" | "review" | "unreadable";
+export const SOURCE_FILE_ACCEPT = ".pdf,.docx,.xls,.xlsx";
+export const isSupportedSourceFile = (name: string) => /\.(pdf|docx|xls|xlsx)$/i.test(name);
 export type LinkState = "linked" | "suggested" | "rejected" | "none";
 export type RegStatus =
   "unverified" | "verified_local" | "verified_online" | "not_found" | "invalid";
@@ -102,8 +104,6 @@ export interface SourceFile {
   linkRow?: number; // recipe ingredient row
   linkState: LinkState;
   linkScore?: number;
-  /** Only partly readable (legacy .doc without local converter) – requires manual review. */
-  partial?: boolean;
   demo?: boolean;
   /** Explicit demo marker (mirrors `demo`) */
   isDemo?: boolean;
@@ -258,105 +258,6 @@ async function docxBlocks(buf: ArrayBuffer): Promise<Block[]> {
     if (text) out.push({ text, page });
   }
   return out;
-}
-
-export const LEGACY_DOC_WARNING = "! Régi Word formátum – ellenőrzés szükséges";
-
-/**
- * Local .doc → .docx conversion component for the offline installed version.
- * The installer runs a converter on this machine only (e.g. headless LibreOffice wrapped in a tiny
- * HTTP service on 127.0.0.1). No cloud conversion is ever used. Contract:
- *   POST {url}/convert  body: raw .doc bytes  →  200 with .docx bytes
- * The URL can be changed via localStorage key "rf.docConverterUrl". If unreachable, returns null.
- */
-export async function convertLegacyDocLocally(buf: ArrayBuffer): Promise<ArrayBuffer | null> {
-  if (typeof window === "undefined") return null;
-  const base = localStorage.getItem("rf.docConverterUrl") || "http://127.0.0.1:8765";
-  const { isLoopbackUrl } = await import("../network");
-  if (!isLoopbackUrl(base)) return null;
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), 1500);
-  try {
-    const r = await fetch(`${base}/convert`, {
-      method: "POST",
-      body: buf,
-      redirect: "error",
-      signal: ctl.signal,
-      headers: { "Content-Type": "application/msword" },
-    });
-    if (!r.ok) return null;
-    const out = await r.arrayBuffer();
-    return new Uint8Array(out.slice(0, 2)).join() === "80,75" ? out : null; // ZIP signature
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-/** Legacy binary .doc fallback: best-effort local text scan. Never treated as validated data. */
-function legacyDocBlocks(buf: ArrayBuffer): Block[] {
-  const bytes = new Uint8Array(buf);
-  // Word 97 stores text mostly as 8-bit or UTF-16LE; read both and keep readable runs.
-  const runs: string[] = [];
-  let cur = "";
-  for (let i = 0; i < bytes.length; i++) {
-    const b = bytes[i];
-    if ((b >= 32 && b < 127) || b >= 0xc0 || b === 9) cur += String.fromCharCode(b);
-    else if (b === 13 || b === 10) {
-      if (cur.trim().length > 3) runs.push(cur.trim());
-      cur = "";
-    } else if (b !== 0) {
-      if (cur.trim().length > 3) runs.push(cur.trim());
-      cur = "";
-    }
-  }
-  const seen = new Set<string>();
-  return runs
-    .map((r) => r.replace(/\s+/g, " ").trim())
-    .filter((r) => {
-      if (!isReadableLegacyText(r) || seen.has(r)) return false;
-      seen.add(r);
-      return true;
-    })
-    .map((text) => ({ text }));
-}
-
-const LEGACY_META =
-  /(ÿ{2,}|\bproperties\b|urn:schemas|schemas-microsoft|customxml|clrmap|datastoreitem|xmlns|mailto:|http:\/\/|https:\/\/|\.xml\b|\bole\b|root entry|summaryinformation|documentsummary|worddocument|compobj|normal\.dot|times new roman|msworddoc|word\.document|\bstyles?\b.*\bdefault\b|\[content_types\]|theme\/|rels\b)/i;
-
-/** Strict human-language filter for legacy .doc byte-scan fragments. */
-export function isReadableLegacyText(t: string): boolean {
-  const s = t.trim();
-  if (s.length < 4 || s.length > 400) return false;
-  if (LEGACY_META.test(s)) return false;
-  if (/ÿ/.test(s)) return false;
-  const letters = (s.match(/[A-Za-zÀ-ž]/g) ?? []).length;
-  const symbols = (s.match(/[^A-Za-zÀ-ž0-9\s.,:;/()%+\-–°<>=]/g) ?? []).length;
-  if (letters / s.length < 0.5) return false;
-  if (symbols / s.length > 0.1) return false;
-  // sequential ASCII runs (character tables)
-  let seq = 0;
-  for (let i = 1; i < s.length; i++) {
-    if (s.charCodeAt(i) === s.charCodeAt(i - 1) + 1) {
-      if (++seq >= 5) return false;
-    } else seq = 0;
-  }
-  const words = s.split(/[\s:/,;()]+/).filter((w) => /^[A-Za-zÀ-ž]{2,}$/.test(w));
-  if (!words.length) return false;
-  // words must look like words: contain a vowel and not be excessively long
-  const good = words.filter((w) => /[aeiouáéíóöőúüűAEIOUÁÉÍÓÖŐÚÜŰy]/.test(w) && w.length <= 25);
-  if (good.length / words.length < 0.7) return false;
-  // mixed-case garbage like "aBcDeF"
-  if (words.some((w) => /[a-z][A-Z][a-z][A-Z]/.test(w))) return false;
-  return true;
-}
-
-const BUSINESS_TERMS =
-  /(product|termék|termek|ingredient|összetev|osszetev|alapanyag|composition|flavou?r|aroma|íz|colou?r|szín|szin|preservative|tartósít|tartosit|carrier|bearer|hordozó|hordozo|allerg|storage|tárol|tarol|transport|szállít|szallit|shelf|minőség|minoseg|eltarthat|quality|ph\b|moisture|nedvesség|manufactur|gyártó|gyarto|supplier|szállító|beszállító|regulation|rendelet|\d{2,4}\/\d{4}\/(eu|ek|egk))/i;
-
-export function isBusinessRelevant(t: string): boolean {
-  return BUSINESS_TERMS.test(t);
 }
 
 function sheetBlocks(buf: ArrayBuffer): Block[] {
@@ -760,7 +661,7 @@ function startsWithAlias(h: string, aliases: string[]) {
   return aliases.find((a) => h === a || h.startsWith(a + " "));
 }
 
-export function extractFromBlocks(blocks: Block[], opts: { legacy?: boolean } = {}) {
+export function extractFromBlocks(blocks: Block[]) {
   const fields: ExtractedField[] = [];
   const regulatory: RegRef[] = [];
   const unknown: UnknownItem[] = [];
@@ -861,7 +762,6 @@ export function extractFromBlocks(blocks: Block[], opts: { legacy?: boolean } = 
         unknown.length < 25 &&
         lv[1].length > 2 &&
         !isNoiseText(b.text) &&
-        (!opts.legacy || (isReadableLegacyText(b.text) && isBusinessRelevant(b.text))) &&
         !unknown.some((u) => norm(u.text) === k)
       )
         unknown.push({ id: uid(), text: txt, page: b.page });
@@ -898,6 +798,11 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     unknown: [],
     linkState: "none",
   };
+  if (!isSupportedSourceFile(file.name)) {
+    sf.status = "unreadable";
+    sf.warnings.push("Nem támogatott fájlformátum. Használjon PDF, DOCX, XLS vagy XLSX fájlt.");
+    return sf;
+  }
   await persistSourceFile(sf.id, file);
   try {
     const buf = await file.arrayBuffer();
@@ -905,23 +810,6 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
     if (ext === "pdf") blocks = await pdfBlocks(buf);
     else if (ext === "docx") blocks = await docxBlocks(buf);
     else if (ext === "xls" || ext === "xlsx") blocks = sheetBlocks(buf);
-    let legacyPartial = false;
-    if (ext === "doc") {
-      const converted = await convertLegacyDocLocally(buf);
-      if (converted) {
-        blocks = await docxBlocks(converted);
-        sf.warnings.push("Régi Word (.doc) formátum – helyi konverterrel DOCX-re alakítva.");
-      } else {
-        blocks = legacyDocBlocks(buf);
-        legacyPartial = true;
-        sf.warnings.push(LEGACY_DOC_WARNING);
-        sf.warnings.push("Részlegesen olvasható régi Word dokumentum");
-        sf.warnings.push(
-          "A dokumentum csak részlegesen olvasható. A véglegesítés előtt ellenőrzés szükséges.",
-        );
-      }
-    } else if (!(ext === "pdf" || ext === "docx" || ext === "xls" || ext === "xlsx"))
-      throw new Error("unsupported");
     if (!blocks.length) {
       sf.status = "unreadable";
       sf.warnings.push(
@@ -931,14 +819,9 @@ export async function processFile(file: File, section: "spec" | "reference"): Pr
       );
       return sf;
     }
-    const x = extractFromBlocks(blocks, { legacy: legacyPartial });
+    const x = extractFromBlocks(blocks);
     Object.assign(sf, x);
     sf.detectedMaterial = x.fields.find((f) => f.key === "product_description")?.value;
-    // Best-effort byte scanning of legacy .doc can NEVER make the file validated.
-    if (ext === "doc" && legacyPartial) {
-      sf.status = "review";
-      sf.partial = true;
-    } else if (ext === "doc") sf.status = "review";
     if (x.fields.length < 2) {
       sf.status = "review";
       sf.warnings.push("Kevés adat azonosítható automatikusan.");
@@ -957,7 +840,6 @@ const STOP = new Set([
   "spec",
   "demo",
   "pdf",
-  "doc",
   "docx",
   "xls",
   "xlsx",
@@ -1226,8 +1108,8 @@ export function demoSpecFiles(): SourceFile[] {
       [["Safety precautions: fine powder can cause dust explosion", 3]],
     ),
     f(
-      "Demo RASPBERRY-muesli specification.doc",
-      "doc",
+      "Demo RASPBERRY-muesli specification.docx",
+      "docx",
       "RAW_MATERIAL_SPECIFICATION",
       "Málna-müzli",
       [
@@ -1282,8 +1164,6 @@ export function demoSpecFiles(): SourceFile[] {
       ],
       [],
       [],
-      "review",
-      ["! Régi Word formátum – ellenőrzés szükséges"],
     ),
   ];
 }

@@ -31,7 +31,7 @@ The production server uses the standard [TanStack Start and Nitro Node deploymen
 - Fonts, document templates, PDF worker, and app assets are served by this installation. No external font service or runtime error reporting integration is used.
 - Optional AI review sends target field keys/labels and short extracted snippets to the app server, which forwards them to the explicitly configured AI endpoint. Files are not uploaded by that feature, but snippets can contain sensitive supplier/product information. AI review requires the existing administrator opt-in; no provider is configured by default.
 - Online regulation checks send only a normalized regulation identifier to the app server and then to the EU Publications Office. `LOCAL_ONLY=1` skips the external query and returns the existing offline result, leaving manual review available.
-- Legacy `.doc` conversion uses a loopback service only. Run `python tools/doc-converter/server.py` with LibreOffice installed locally if conversion is needed. External hosts and redirects are rejected.
+- Supporting documents can be imported from `.pdf`, `.docx`, `.xls`, and `.xlsx` files. Legacy `.doc` files are not supported; save them as `.docx` before importing. No Word or LibreOffice installation is needed for imports or Word generation.
 - In local mode, AI endpoints must use `localhost`, `127.0.0.1`, or `[::1]`; redirects are rejected. Installation still needs internet unless dependencies and model files are already available offline. User-opened external links remain external links.
 
 ## Optional AI provider

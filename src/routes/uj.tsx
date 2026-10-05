@@ -23,6 +23,8 @@ import {
   demoSpecFiles,
   processFile,
   SOURCE_TYPE_LABELS,
+  SOURCE_FILE_ACCEPT,
+  isSupportedSourceFile,
   type SourceFile,
   type SourceType,
   deleteSourceFile,
@@ -47,8 +49,6 @@ export const Route = createFileRoute("/uj")({
   }),
   component: NewProduct,
 });
-
-const SPEC_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx";
 
 function NewProduct() {
   const { dictionary, settings, upsertProduct, demoMode } = useStore();
@@ -86,7 +86,7 @@ function NewProduct() {
   async function addFiles(list: FileList | null, section: "spec" | "reference") {
     if (!list) return;
     for (const f of Array.from(list)) {
-      if (!/\.(pdf|docx?|xlsx?)$/i.test(f.name)) {
+      if (!isSupportedSourceFile(f.name)) {
         toast.error(`${f.name}: nem támogatott formátum`);
         continue;
       }
@@ -205,7 +205,7 @@ function NewProduct() {
           />
         </Section>
 
-        <Section n={2} title="Alapanyag specifikációk" hint="PDF, DOC, DOCX, XLS, XLSX">
+        <Section n={2} title="Alapanyag specifikációk" hint="PDF, DOCX, XLS, XLSX">
           <ul className="space-y-2">
             {specs.map((s) => (
               <li key={s.id}>
@@ -256,7 +256,7 @@ function NewProduct() {
             ref={specInput}
             type="file"
             multiple
-            accept={SPEC_ACCEPT}
+            accept={SOURCE_FILE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               addFiles(e.target.files, "spec");
@@ -297,7 +297,7 @@ function NewProduct() {
             ref={refInput}
             type="file"
             multiple
-            accept={SPEC_ACCEPT}
+            accept={SOURCE_FILE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               addFiles(e.target.files, "reference");

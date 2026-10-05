@@ -228,21 +228,6 @@ describe("recipe source reopening", () => {
   });
 });
 
-describe("legacy .doc", () => {
-  it("partly read legacy DOC blocks approval until manual review is confirmed", () => {
-    const p = demoPackageProduct(dict, "Teszt");
-    const f = { ...p.files![0], id: "doc1", ext: "doc", status: "review" as const, partial: true };
-    p.files = [...p.files!, f];
-    const c1 = buildDataset(p, dict, S).checks.find((c) => c.id === "src-legacy");
-    expect(c1?.level).toBe("error");
-    p.partialReviewAck = Object.fromEntries(
-      p.files.map((x) => [x.id, { by: "Admin", at: "2026-01-01" }]),
-    );
-    const c2 = buildDataset(p, dict, S).checks.find((c) => c.id === "src-legacy");
-    expect(c2?.level).toBe("ok");
-  });
-});
-
 describe("local backup", () => {
   it("backup → restore round-trips state and source files", async () => {
     await saveFileBlob("bk1", new Blob(["hello"], { type: "text/plain" }), "h.txt");

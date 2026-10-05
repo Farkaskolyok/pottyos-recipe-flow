@@ -507,21 +507,6 @@ export function buildDataset(p: Product, dict: DictionaryEntry[], settings: Sett
       level: "ok",
       text: `${specs.length} alapanyag specifikáció beolvasva`,
     });
-    const legacyFiles = files.filter((f) => f.ext === "doc" && f.status !== "ok");
-    const legacyOpen = legacyFiles.filter((f) => !p.partialReviewAck?.[f.id]).length;
-    if (legacyOpen)
-      checks.push({
-        id: "src-legacy",
-        level: "error",
-        text: `! Régi Word formátum: ${legacyOpen} dokumentum csak részlegesen olvasható – kézi ellenőrzés szükséges`,
-        action: "sources",
-      });
-    else if (legacyFiles.length)
-      checks.push({
-        id: "src-legacy",
-        level: "ok",
-        text: `Régi Word dokumentum kézzel ellenőrizve (${legacyFiles.length})`,
-      });
     if (unreadable)
       checks.push({
         id: "src-unread",

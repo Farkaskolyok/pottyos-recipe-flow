@@ -64,7 +64,7 @@ export function specStats(f: SourceFile) {
 
 export function specHeadline(f: SourceFile) {
   const s = specStats(f);
-  const open = s.outRelevantOpen + s.unclassified + (f.partial || f.status !== "ok" ? 1 : 0);
+  const open = s.outRelevantOpen + s.unclassified + (f.status !== "ok" ? 1 : 0);
   return open
     ? `A specifikáció feldolgozva – ${s.review + s.unclassified} mező ellenőrzendő`
     : "Minden adat feldolgozva";
